@@ -1,8 +1,11 @@
-import { useState } from 'react'
-import Index from './pages'
+import AuthPage from './pages/AuthPage';
+import LoginPage from './pages/LoginPage';
+import SignUpPage from './pages/SignUpPage';
 
 function App() {
-  return <Index />
+  return (
+    <AuthPage />
+  );
 }
 
-export default App
+export default App;
