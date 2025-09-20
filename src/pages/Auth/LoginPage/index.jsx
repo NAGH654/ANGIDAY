@@ -1,3 +1,4 @@
+// LoginPage.jsx
 import React, { useState } from "react";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { FaFacebook } from "react-icons/fa";
@@ -15,9 +16,9 @@ const InputField = ({ type, placeholder, icon: Icon }) => {
       <input
         type={inputType}
         placeholder={placeholder}
-        className="w-full px-10 py-3 text-sm text-gray-800 border border-gray-300 rounded-lg 
-                   focus:outline-none focus:ring-1 focus:ring-orange-500 
-                   hover:border-orange-400 hover:shadow-md hover:shadow-orange-100
+        className="w-full px-10 py-3 text-sm text-gray-700 border border-gray-300 rounded-lg 
+                   focus:outline-none focus:ring-2 focus:ring-pink-500 
+                   hover:border-pink-400 hover:shadow-md hover:shadow-pink-100
                    transition-all duration-300"
       />
       {Icon && (
@@ -30,7 +31,7 @@ const InputField = ({ type, placeholder, icon: Icon }) => {
         <button
           type="button"
           onClick={() => setShow(!show)}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-orange-500 transition-colors"
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-pink-500 transition-colors"
         >
           {show ? <EyeOff size={18} /> : <Eye size={18} />}
         </button>
@@ -43,7 +44,7 @@ const InputField = ({ type, placeholder, icon: Icon }) => {
 const AuthButton = ({ children }) => (
   <button
     type="submit"
-    className="w-full bg-gradient-to-r from-orange-400 to-orange-600 text-white font-semibold py-3 rounded-lg 
+    className="w-full bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white font-semibold py-3 rounded-lg 
                flex items-center justify-center shadow-lg hover:brightness-90 
                hover:shadow-xl hover:scale-[1.03] active:scale-[0.97] 
                transition-all duration-300 ease-out"
@@ -57,7 +58,7 @@ const SocialButton = ({ icon: Icon, children, className = "" }) => (
   <button
     className={`w-1/2 flex items-center justify-center py-2.5 border border-gray-300 rounded-lg 
                 text-sm font-semibold text-gray-700 bg-white
-                hover:bg-gray-100 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] 
+                hover:bg-gray-50 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] 
                 transition-all duration-300 ${className}`}
   >
     {Icon && <Icon className="mr-2" size={18} />}
@@ -81,19 +82,24 @@ const LoginPage = () => {
           <label className="flex items-center">
             <input
               type="checkbox"
-              className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+              className="w-4 h-4 text-pink-600 border-gray-300 rounded focus:ring-pink-500"
             />
             <span className="ml-2 text-gray-600">Remember me</span>
           </label>
           <Link
             to={endPoint.FORGOTPASSWORD}
-            className="text-orange-600 font-medium hover:brightness-75 hover:underline transition-colors"
+            className="text-pink-500 font-semibold hover:text-pink-600 hover:underline transition-colors"
           >
             Forgot Password?
           </Link>
         </div>
 
-        <AuthButton>Sign In →</AuthButton>
+        <AuthButton>
+          Sign In
+          <svg className="w-4 h-4 ml-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+          </svg>
+        </AuthButton>
       </form>
 
       {/* Divider */}
