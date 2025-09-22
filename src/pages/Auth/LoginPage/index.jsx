@@ -17,7 +17,7 @@ const InputField = ({ type, placeholder, icon: Icon }) => {
         type={inputType}
         placeholder={placeholder}
         className="w-full px-10 py-3 text-sm text-gray-700 border border-gray-300 rounded-lg 
-                   focus:outline-none focus:ring-2 focus:ring-pink-500 
+                   focus:outline-none focus:ring-1  focus:ring-pink-500 
                    hover:border-pink-400 hover:shadow-md hover:shadow-pink-100
                    transition-all duration-300"
       />

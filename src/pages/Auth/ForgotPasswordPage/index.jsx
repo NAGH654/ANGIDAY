@@ -13,7 +13,7 @@ const InputField = ({ type, placeholder, icon: Icon, label }) => (
         type={type}
         placeholder={placeholder}
         className="w-full px-12 py-3 text-sm text-gray-700 border border-gray-300 rounded-lg 
-                   hover:border-pink-400 focus:outline-none focus:ring-2 focus:ring-pink-500 
+                   hover:border-pink-400 focus:outline-none focus:ring-1 focus:ring-pink-500 
                    transition duration-300"
       />
       {Icon && (
