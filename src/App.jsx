@@ -9,15 +9,15 @@ import { endPoint } from "@routes/router";
 // Auth wrapper
 import AuthPage from "@pages/Auth/AuthPage";
 
+// Public pages
+import HomePage from "@pages/HomePage/mainLayout";
+
 function App() {
   return (
     <Router>
       <Routes>
-        {/* Default → login */}
-        <Route
-          path={endPoint.HOMEPAGE}
-          element={<Navigate to={endPoint.LOGIN} replace />}
-        />
+        {/* Default → homePage */}
+         <Route path={endPoint.HOMEPAGE} element={<HomePage />} />
 
         {/* Auth (login/register/forgot) */}
         <Route path={endPoint.AUTH} element={<AuthPage />} />
