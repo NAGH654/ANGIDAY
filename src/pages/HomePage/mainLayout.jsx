@@ -112,14 +112,14 @@ const FoodHomepage = () => {
             {/* Login / Register */}
             <div className="flex items-center space-x-2 ml-6">
               <button
-                className="h-9 px-3.5 flex items-center justify-center rounded-2xl border border-pink-500 text-pink-500 font-medium 
+                className="h-8.5 px-3.5 flex items-center justify-center rounded-lg border border-pink-500 text-pink-500 font-medium 
         hover:bg-pink-50 hover:scale-105 active:scale-95 
         transition-all duration-200 ease-out"
               >
                 Đăng nhập
               </button>
               <button
-                className="h-9 px-4 flex items-center justify-center rounded-2xl bg-gradient-to-r from-pink-500 to-purple-600 text-white font-medium 
+                className="h-8.5 px-4 flex items-center justify-center rounded-lg bg-gradient-to-r from-pink-500 to-purple-600 text-white font-medium 
         shadow hover:shadow-lg hover:scale-105 active:scale-95 
         transition-all duration-200 ease-out"
               >
@@ -137,7 +137,7 @@ const FoodHomepage = () => {
                 <button
                   key={category.name}
                   onClick={() => setActiveCategory(category.name)}
-                  className={`flex items-center space-x-2 px-4 py-2 shadow-sm hover:shadow-md hover:scale-[1.01]  rounded-lg whitespace-nowrap font-medium transition-all duration-200 ease-out ${
+                  className={`flex items-center space-x-2 px-4 py-2 shadow-sm hover:shadow-md hover:scale-[1.01] rounded-2xl whitespace-nowrap font-medium transition-all duration-200 ease-out ${
                     activeCategory === category.name
                       ? "bg-gradient-to-br from-pink-500 via-pink-400 to-pink-500 text-white "
                       : "bg-gray-100 text-gray-700 hover:bg-pink-100 "
