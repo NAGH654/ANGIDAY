@@ -10,6 +10,8 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { categories, restaurants } from "./data";
+import { Link } from "react-router-dom";
+import { endPoint } from "@routes/router";
 
 const FoodHomepage = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -111,20 +113,23 @@ const FoodHomepage = () => {
 
             {/* Login / Register */}
             <div className="flex items-center space-x-2 ml-6">
-              <button
+              <Link
+                to={endPoint.LOGIN}
                 className="h-8.5 px-3.5 flex items-center justify-center rounded-lg border border-pink-500 text-pink-500 font-medium 
-        hover:bg-pink-50 hover:scale-105 active:scale-95 
-        transition-all duration-200 ease-out"
+      hover:bg-pink-50 hover:scale-105 active:scale-95 
+      transition-all duration-200 ease-out"
               >
                 Đăng nhập
-              </button>
-              <button
+              </Link>
+
+              <Link
+                to={endPoint.REGISTER}
                 className="h-8.5 px-4 flex items-center justify-center rounded-lg bg-gradient-to-r from-pink-500 to-purple-600 text-white font-medium 
-        shadow hover:shadow-lg hover:scale-105 active:scale-95 
-        transition-all duration-200 ease-out"
+      shadow hover:shadow-lg hover:scale-105 active:scale-95 
+      transition-all duration-200 ease-out"
               >
                 Đăng ký
-              </button>
+              </Link>
             </div>
           </div>
         </header>
