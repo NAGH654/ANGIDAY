@@ -11,6 +11,7 @@ import AuthPage from "@pages/Auth/AuthPage";
 
 // Public pages
 import HomePage from "@pages/HomePage/mainLayout";
+import CommunityPage from "@pages/CommunityPage";
 
 function App() {
   return (
@@ -18,6 +19,8 @@ function App() {
       <Routes>
         {/* Default → homePage */}
          <Route path={endPoint.HOMEPAGE} element={<HomePage />} />
+         {/* Community Page */}
+        <Route path={endPoint.COMMUNITY} element={<CommunityPage />} />
 
         {/* Auth (login/register/forgot) */}
         <Route path={endPoint.AUTH} element={<AuthPage />} />
