@@ -9,9 +9,10 @@ import {
   MapPin,
   MessageCircle,
 } from "lucide-react";
-import { categories, restaurants } from "./data";
+import { categories, restaurants } from "../../assets/data";
 import { Link } from "react-router-dom";
 import { endPoint } from "@routes/router";
+import CustomerSideBar from "@layout/CustomerSideBar";
 
 const FoodHomepage = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -40,55 +41,7 @@ const FoodHomepage = () => {
   return (
     <div className="bg-gray-50 min-h-screen flex">
       {/* Sidebar - Desktop */}
-      <aside className="hidden lg:block w-20 bg-white shadow-lg fixed left-0 top-0 h-full z-50">
-        <div className="flex flex-col items-center py-4 space-y-8">
-          {/* Logo */}
-          <div className="flex justify-center mb-6">
-            <div className="w-12 h-12 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-lg flex items-center justify-center shadow-lg hover:scale-110 transition-transform duration-300">
-              <span className="text-white text-4xl font-bold">F</span>
-            </div>
-          </div>
-
-          {/* Nav */}
-          <nav className="flex flex-col space-y-6">
-            <a
-              href="#"
-              className="w-12 h-12 bg-gray-900 rounded-xl flex items-center justify-center hover:bg-gray-800 transition-colors"
-            >
-              <Home size={20} className="text-white" />
-            </a>
-            <a
-              href="#"
-              className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center hover:bg-gray-200 transition-colors group"
-            >
-              <Heart
-                size={20}
-                className="text-gray-600 group-hover:text-pink-500"
-              />
-            </a>
-            <a
-              href="#"
-              className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center hover:bg-gray-200 transition-colors group"
-            >
-              <Users
-                size={20}
-                className="text-gray-600 group-hover:text-blue-500"
-              />
-            </a>
-          </nav>
-
-          {/* Settings */}
-          <div className="flex flex-col space-y-6 mt-auto">
-            <a
-              href="#"
-              className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center hover:bg-gray-200 transition-colors"
-            >
-              <Settings size={20} className="text-gray-600" />
-            </a>
-          </div>
-        </div>
-      </aside>
-
+      <CustomerSideBar />
       {/* Main */}
       <main className="flex-1 lg:ml-20">
         {/* Header */}
