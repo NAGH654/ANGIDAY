@@ -3,6 +3,7 @@ export const endPoint = {
   COMMUNITY: "/community",
   RESTAURANT_BOOKMARK: "/bookmarks/restaurants",
   POST_BOOKMARK: "/bookmarks/posts",
+  PACKAGE: "/package",
   AUTH: "/auth",
   LOGIN: "/auth?view=login",
   REGISTER: "/auth?view=register",
