@@ -12,15 +12,22 @@ import AuthPage from "@pages/Auth/AuthPage";
 // Public pages
 import HomePage from "@pages/HomePage/mainLayout";
 import CommunityPage from "@pages/CommunityPage";
+import RestaurantBookMarkPage from "@pages/BookMarkPage/RestaurantBookMarkPage";
+import PostBookMarkPage from "@pages/BookMarkPage/PostBookMarkPage";
 
 function App() {
   return (
     <Router>
       <Routes>
         {/* Default → homePage */}
-         <Route path={endPoint.HOMEPAGE} element={<HomePage />} />
-         {/* Community Page */}
+        <Route path={endPoint.HOMEPAGE} element={<HomePage />} />
+        {/* Community Page */}
         <Route path={endPoint.COMMUNITY} element={<CommunityPage />} />
+        <Route
+          path={endPoint.RESTAURANT_BOOKMARK}
+          element={<RestaurantBookMarkPage />}
+        />
+        <Route path={endPoint.POST_BOOKMARK} element={<PostBookMarkPage />} />
 
         {/* Auth (login/register/forgot) */}
         <Route path={endPoint.AUTH} element={<AuthPage />} />
