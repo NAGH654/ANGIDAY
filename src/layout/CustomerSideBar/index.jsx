@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Heart, Home, Users, Plus } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom"; // 👈 thêm useLocation
 import { endPoint } from "@routes/router";
-
+import AnGiDayLogo from "@assets/AnGiDay.png";
 const CustomerSideBar = () => {
   const [showHeartDropdown, setShowHeartDropdown] = useState(false);
   const location = useLocation(); // 👈 lấy path hiện tại
@@ -22,7 +22,7 @@ const CustomerSideBar = () => {
         <div className="flex justify-center mb-6">
           <div>
             <img
-              src="/src/assets/AnGiDay.png"
+              src={AnGiDayLogo}
               alt="AnGiDay Logo"
               className="w-8 h-8 object-contain"
             />
