@@ -15,6 +15,7 @@ import CommunityPage from "@pages/CommunityPage";
 import RestaurantBookMarkPage from "@pages/BookMarkPage/RestaurantBookMarkPage";
 import PostBookMarkPage from "@pages/BookMarkPage/PostBookMarkPage";
 import PackagePage from "@pages/PackagePage";
+import PostPage from "@pages/PostPage";
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
           element={<RestaurantBookMarkPage />}
         />
         <Route path={endPoint.POST_BOOKMARK} element={<PostBookMarkPage />} />
+        <Route path={endPoint.POST} element={<PostPage />} />
         {/* Package Page */}
         <Route path={endPoint.PACKAGE} element={<PackagePage />} />
 
