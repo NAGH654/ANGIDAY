@@ -7,11 +7,10 @@ import useDebouncedValue from "@hooks/useDebouncedValue";
 import parseDistance from "@utils/parseDistance";
 
 import CategoryFilter from "./components/categoryFilter";
-import SortMenu from "./components/SortMenu";
-import ViewToggle from "./components/ViewToggle";
-import GridCard from "./components/GridCard";
-import ListRow from "./components/ListRow";
-
+import SortMenu from "./components/sortMenu";
+import ViewToggle from "./components/viewToggle";
+import GridCard from "./components/gridCard";
+import ListRow from "./components/listRow";
 function RestaurantBookMarkPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearch = useDebouncedValue(searchQuery, 300);
