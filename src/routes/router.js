@@ -3,10 +3,15 @@ export const endPoint = {
   COMMUNITY: "/community",
   RESTAURANT_BOOKMARK: "/bookmarks/restaurants",
   POST_BOOKMARK: "/bookmarks/posts",
+  
   POST: "/post",
   PACKAGE: "/package",
   AUTH: "/auth",
   LOGIN: "/auth?view=login",
   REGISTER: "/auth?view=register",
-  FORGOTPASSWORD:"/auth?view=forgotPassword"
+  FORGOTPASSWORD:"/auth?view=forgotPassword",
+  RESTAURANT_DETAIL: (id = ":id") => `/restaurants/${id}`,
+  RESTAURANT_MENU: (id = ":id") => `/restaurants/${id}/menu`,
+  RESTAURANT_REVIEWS: (id = ":id") => `/restaurants/${id}/reviews`,
+   RESTAURANT_EDIT:   (id=":id") => `/restaurants/${id}/edit`,
 }

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Search, Bell, ChevronDown } from "lucide-react";
 import { Link } from "react-router-dom";
-
+import { endPoint } from "@routes/router";
 /**
  * Props:
  * - searchQuery: string
@@ -139,14 +139,14 @@ const FoodHeader = ({
           {!isAuthenticated ? (
             <div className="flex items-center gap-2">
               <Link
-                to={loginPath}
+                to={endPoint.LOGIN}
                 className="h-9 px-3.5 flex items-center justify-center rounded-lg border border-pink-500 text-pink-600 text-sm font-medium 
                            hover:bg-pink-50 hover:scale-[1.02] active:scale-95 transition-all"
               >
                 Đăng nhập
               </Link>
               <Link
-                to={registerPath}
+                to={endPoint.REGISTER}
                 className="h-9 px-4 flex items-center justify-center rounded-lg bg-gradient-to-r from-pink-500 to-purple-600 text-white text-sm font-medium 
                            shadow hover:shadow-md hover:scale-[1.02] active:scale-95 transition-all"
               >
