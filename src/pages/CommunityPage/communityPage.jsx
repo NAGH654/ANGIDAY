@@ -5,8 +5,8 @@ import CustomerSideBar from "@layout/SideBar";
 import { endPoint } from "@routes/router";
 
 // Components
-import PostCard from "./components/postCard";
-import RightSidebar from "./components/rightSidebar";
+import PostCard from "./components/postCard.jsx";
+import RightSidebar from "./components/rightSideBar.jsx";
 import { defaultPosts, topUsers, user } from "./data/data";
 
 function CommunityPage() {
