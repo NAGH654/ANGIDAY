@@ -19,6 +19,10 @@ import RestaurantBookMarkPage from "@pages/BookMarkPage/RestaurantBookMarkPage/R
 import PostBookMarkPage from "@pages/BookMarkPage/PostBookMarkPage/PostBookMarkPage";
 import PackagePage from "@pages/PackagePage";
 import PostPage from "@pages/PostPage";
+import CardDetailPage from "@pages/CardDetailPage";
+import MenuPage from "@pages/CardDetailPage/MenuPage";
+import ReviewDetailPage from "@pages/CardDetailPage/ReviewDetailPage";
+import EditRestaurantProfilePage from "@pages/Profile/RestaurantProfile/EditRestaurantProfilePage";
 
 function App() {
   return (
@@ -34,10 +38,24 @@ function App() {
             element={<RestaurantBookMarkPage />}
           />
           <Route path={endPoint.POST_BOOKMARK} element={<PostBookMarkPage />} />
+          {/* ⬇️ Route chi tiết */}
+          <Route
+            path={endPoint.RESTAURANT_DETAIL()}
+            element={<CardDetailPage />}
+          />
+          {/* ⬇️ Trang menu đầy đủ */}
+          <Route path={endPoint.RESTAURANT_MENU()} element={<MenuPage />} />
+          <Route
+            path={endPoint.RESTAURANT_REVIEWS()}
+            element={<ReviewDetailPage />}
+          />
+          <Route
+            path={endPoint.RESTAURANT_EDIT()}
+            element={<EditRestaurantProfilePage />}
+          />
+          {/* Package Page */}
+          <Route path={endPoint.PACKAGE} element={<PackagePage />} />
         </Route>
-
-        {/* Package Page */}
-        <Route path={endPoint.PACKAGE} element={<PackagePage />} />
 
         {/* Auth (login/register/forgot) */}
         <Route path={endPoint.AUTH} element={<AuthPage />} />
