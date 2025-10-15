@@ -10,7 +10,8 @@ import PostSortMenu from "./components/postSortMenu";
 import ViewToggle from "./components/viewToggle";
 
 // data + hooks + utils
-import { POSTS, POST_CATEGORIES } from "./data/data";
+import { POST_CATEGORIES } from "./data/data";
+import { useGetBookmarkedPostsQuery, useUnbookmarkPostMutation } from "@redux/api/userApi";
 import useDebouncedValue from "@hooks/useDebouncedValue";
 import parseVnDate from "@utils/parseVnDate";
 
@@ -41,24 +42,80 @@ const PostBookMarkPage = () => {
   // category filter
   const [selectedCategory, setSelectedCategory] = useState("Tất cả");
 
-  // bookmark toggle (để đổi icon, không remove item)
-  const [bookmarkedIds, setBookmarkedIds] = useState(
-    () => new Set(POSTS.map((p) => p.id))
-  );
-  const toggleBookmark = (id) => {
+  // Load bookmarked posts from API
+  const { data: apiPosts, isLoading, isFetching, refetch } = useGetBookmarkedPostsQuery();
+  const mappedApiPosts = useMemo(() => {
+    if (!apiPosts) return null; // explicit null to indicate API loaded but maybe empty
+    if (apiPosts.length === 0) return [];
+    return apiPosts.map((p, idx) => ({
+      id: p.id ?? p.postId ?? idx + 1000,
+      title: p.title || p.type || "Bài viết",
+      author: {
+        name: p.username || "Người dùng",
+        avatar:
+          "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=64&h=64&fit=crop&crop=face",
+        verified: false,
+      },
+      timeAgo: "",
+      content: p.content || "",
+      image: p.imageUrl || null,
+      tags: p.postTags || [],
+      interactions: { likes: p.likes || 0, comments: p.comments || 0, shares: p.shares || 0 },
+      bookmarkedDate: p.updatedAt || p.createdAt || "",
+      category: p.category || "Review",
+      isPopular: false,
+    }));
+  }, [apiPosts]);
+
+  // bookmark toggle (gọi API + optimistic)
+  const [bookmarkedIds, setBookmarkedIds] = useState(new Set());
+  const [optimisticRemovedIds, setOptimisticRemovedIds] = useState(new Set());
+  const [unbookmarkPost] = useUnbookmarkPostMutation();
+  const toggleBookmark = async (id) => {
+    const isSaved = bookmarkedIds.has(id);
+    if (!isSaved) return; // trong trang này, chỉ thực hiện xóa lưu
+    // optimistic remove
     setBookmarkedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      next.delete(id);
       return next;
     });
+    setOptimisticRemovedIds((prev) => new Set(prev).add(id));
+    try {
+      await unbookmarkPost(id).unwrap();
+      // sync lại danh sách từ server
+      refetch();
+    } catch (e) {
+      // rollback nếu lỗi
+      setBookmarkedIds((prev) => {
+        const next = new Set(prev);
+        next.add(id);
+        return next;
+      });
+      setOptimisticRemovedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
   };
+
+  // Hydrate ids when API changes
+  useEffect(() => {
+    // Đừng ghi đè trạng thái optimistic trong khi đang fetching
+    if (!Array.isArray(mappedApiPosts)) return;
+    const incoming = new Set(mappedApiPosts.map((p) => p.id));
+    // Loại các id đang pending delete để không bật lại icon
+    optimisticRemovedIds.forEach((id) => incoming.delete(id));
+    setBookmarkedIds(incoming);
+  }, [mappedApiPosts, isFetching, optimisticRemovedIds]);
 
   // filter + sort
   const filteredPosts = useMemo(() => {
     const q = debouncedQuery.trim().toLowerCase();
 
-    let list = POSTS.filter((p) => {
+    const source = Array.isArray(mappedApiPosts) ? mappedApiPosts : [];
+    let list = source.filter((p) => {
       const qMatch =
         !q ||
         p.title.toLowerCase().includes(q) ||
@@ -81,8 +138,7 @@ const PostBookMarkPage = () => {
         break;
       case "recent":
         list.sort(
-          (a, b) =>
-            parseVnDate(b.bookmarkedDate) - parseVnDate(a.bookmarkedDate)
+          (a, b) => parseVnDate(b.bookmarkedDate) - parseVnDate(a.bookmarkedDate)
         );
         break;
       case "popular":
@@ -90,17 +146,13 @@ const PostBookMarkPage = () => {
         list.sort(
           (a, b) =>
             Number(b.isPopular) - Number(a.isPopular) ||
-            b.interactions.likes +
-              b.interactions.comments +
-              b.interactions.shares -
-              (a.interactions.likes +
-                a.interactions.comments +
-                a.interactions.shares)
+            b.interactions.likes + b.interactions.comments + b.interactions.shares -
+              (a.interactions.likes + a.interactions.comments + a.interactions.shares)
         );
         break;
     }
     return list;
-  }, [debouncedQuery, selectedCategory, sortBy]);
+  }, [debouncedQuery, selectedCategory, sortBy, mappedApiPosts]);
 
   // label hiển thị ngắn gọn
   const sortLabel =
@@ -211,7 +263,15 @@ const PostBookMarkPage = () => {
             </div>
           )}
 
-          {filteredPosts.length === 0 && (
+          {isLoading && (
+            <div className="space-y-8">
+              <div className="animate-pulse h-72 bg-white/80 rounded-2xl border border-white/60" />
+              <div className="animate-pulse h-72 bg-white/80 rounded-2xl border border-white/60" />
+              <div className="animate-pulse h-72 bg-white/80 rounded-2xl border border-white/60" />
+            </div>
+          )}
+
+          {filteredPosts.length === 0 && !isLoading && (
             <div className="text-center py-16">
               <div className="w-32 h-32 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-8">
                 <Search size={48} className="text-gray-400" />

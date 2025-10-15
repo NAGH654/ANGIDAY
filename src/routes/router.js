@@ -10,6 +10,9 @@ export const endPoint = {
   REGISTER: "/auth?view=register",
   FORGOTPASSWORD:"/auth?view=forgotPassword",
   ONBOARDING:"/onboarding",
+  // User profile base and segment for nested paths
+  USER_BASE: "/user",
+  PROFILE: "profile",
   RESTAURANT_DETAIL: (id = ":id") => `/restaurants/${id}`,
   RESTAURANT_MENU: (id = ":id") => `/restaurants/${id}/menu`,
   RESTAURANT_REVIEWS: (id = ":id") => `/restaurants/${id}/reviews`,

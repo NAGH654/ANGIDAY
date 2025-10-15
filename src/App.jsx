@@ -18,6 +18,7 @@ import MenuPage from "@pages/CardDetailPage/MenuPage";
 import ReviewDetailPage from "@pages/CardDetailPage/ReviewDetailPage";
 import EditRestaurantProfilePage from "@pages/Profile/RestaurantProfile/EditRestaurantProfilePage";
 import OnboardingPage from "@pages/Auth/OnboardingPage";
+import UserProfilePage from "@pages/Profile/UserProfile";
 
 function AppRoutes() {
   return (
@@ -33,6 +34,12 @@ function AppRoutes() {
             element={<RestaurantBookMarkPage />}
           />
           <Route path={endPoint.POST_BOOKMARK} element={<PostBookMarkPage />} />
+
+          {/* User Profile */}
+          <Route
+            path={`${endPoint.USER_BASE}/${endPoint.PROFILE}`}
+            element={<UserProfilePage />}
+          />
 
           {/* Chi tiết */}
           <Route
