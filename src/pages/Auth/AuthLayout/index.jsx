@@ -10,29 +10,28 @@ const AuthLayout = ({ children }) => {
 
   const titles = {
     login: {
-      title: "Welcome Back",
-      subtitle: "Sign in to continue your culinary journey",
+      title: "Chào mừng trở lại",
+      subtitle: "Đăng nhập để tiếp tục hành trình ẩm thực của bạn",
     },
     register: {
-      title: "Create Account",
-      subtitle: "Join thousands of food lovers today",
+      title: "Tạo tài khoản",
+      subtitle: "Tham gia cùng hàng ngàn người yêu ẩm thực ngay hôm nay",
     },
     forgotPassword: {
-      title: "Forgot Password?",
-      subtitle: "No worries! Enter your email address and we'll send you a link to reset your password.",
+      title: "Quên mật khẩu?",
+      subtitle:
+        "Không sao! Hãy nhập email, chúng tôi sẽ gửi liên kết đặt lại mật khẩu cho bạn.",
     },
   };
 
   const { title, subtitle } = titles[view] || titles.login;
+  const isRegister = view === "register";
 
   const handleRegisterSuccess = () => {
     setShowOnboarding(true);
   };
 
-  // Show onboarding if registration was successful
-  if (showOnboarding) {
-    return <OnboardingPage />;
-  }
+  if (showOnboarding) return <OnboardingPage />;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-100 to-pink-50 flex items-center justify-center p-4 relative overflow-hidden">
@@ -42,8 +41,15 @@ const AuthLayout = ({ children }) => {
       <div className="absolute bottom-20 left-1/4 w-28 h-28 bg-pink-500 rounded-full opacity-5"></div>
       <div className="absolute bottom-20 right-1/4 w-36 h-36 bg-pink-500 rounded-full opacity-5"></div>
 
-      {/* Content box */}
-      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md z-10">
+      {/* Content box (rộng hơn khi register) */}
+      <div
+        className={[
+          "bg-white rounded-2xl shadow-2xl z-10",
+          isRegister
+            ? "w-full max-w-md p-8"
+            : "w-full max-w-md p-8",
+        ].join(" ")}
+      >
         {/* Logo */}
         <div className="flex justify-center mb-6">
           <div className="w-16 h-16 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-2xl flex items-center justify-center shadow-lg hover:scale-110 transition-transform duration-300">
@@ -52,10 +58,18 @@ const AuthLayout = ({ children }) => {
         </div>
 
         {/* Title */}
-        <h1 className="text-2xl font-bold text-center text-gray-800 mb-2">
+        <h2
+          className={`font-bold text-center text-gray-800 mb-2 ${
+            isRegister ? "text-3xl" : "text-4xl"
+          }`}
+        >
           {title}
-        </h1>
-        <p className={`text-center text-gray-500 mb-6 ${view === 'forgotPassword' ? 'text-sm leading-relaxed mb-8' : ''}`}>
+        </h2>
+        <p
+          className={`text-center text-gray-500 mb-6 ${
+            view === "forgotPassword" ? "text-sm leading-relaxed mb-8" : ""
+          }`}
+        >
           {subtitle}
         </p>
 
@@ -70,7 +84,7 @@ const AuthLayout = ({ children }) => {
                   : "text-gray-500 hover:text-gray-700"
               }`}
             >
-              Sign In
+              Đăng nhập
             </Link>
             <Link
               to={endPoint.REGISTER}
@@ -80,13 +94,16 @@ const AuthLayout = ({ children }) => {
                   : "text-gray-500 hover:text-gray-700"
               }`}
             >
-              Sign Up
+              Đăng ký
             </Link>
           </div>
         )}
 
-        {/* Child form - pass onRegisterSuccess for register page */}
-        {React.cloneElement(children, view === "register" ? { onRegisterSuccess: handleRegisterSuccess } : {})}
+        {/* Child form (nếu là register sẽ nhận onRegisterSuccess) */}
+        {React.cloneElement(
+          children,
+          isRegister ? { onRegisterSuccess: handleRegisterSuccess } : {}
+        )}
       </div>
     </div>
   );

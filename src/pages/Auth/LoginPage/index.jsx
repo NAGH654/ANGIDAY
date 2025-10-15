@@ -1,13 +1,24 @@
-// LoginPage.jsx
 import React, { useState } from "react";
-import { Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { User, Lock, Eye, EyeOff } from "lucide-react";
 import { FaFacebook } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
-import { Link } from "react-router-dom";
-import { endPoint } from "@routes/router";
+import { Link, useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { toast } from "react-toastify";
 
-// Input Field
-const InputField = ({ type, placeholder, icon: Icon }) => {
+import { endPoint } from "@routes/router";
+import { useLoginWithUsernameMutation } from "@redux/api/authApi";
+import { setCredentials } from "@redux/features/authSlice";
+import LoadingSpinner from "@components/LoadingSpinner"; // ⬅️ import spinner
+
+const InputField = ({
+  type,
+  placeholder,
+  icon: Icon,
+  value,
+  onChange,
+  disabled,
+}) => {
   const [show, setShow] = useState(false);
   const inputType = type === "password" && show ? "text" : type;
 
@@ -16,10 +27,13 @@ const InputField = ({ type, placeholder, icon: Icon }) => {
       <input
         type={inputType}
         placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
         className="w-full px-10 py-3 text-sm text-gray-700 border border-gray-300 rounded-lg 
-                   focus:outline-none focus:ring-1  focus:ring-pink-500 
+                   focus:outline-none focus:ring-1 focus:ring-pink-500 
                    hover:border-pink-400 hover:shadow-md hover:shadow-pink-100
-                   transition-all duration-300"
+                   transition-all duration-300 disabled:opacity-60"
       />
       {Icon && (
         <Icon
@@ -31,7 +45,8 @@ const InputField = ({ type, placeholder, icon: Icon }) => {
         <button
           type="button"
           onClick={() => setShow(!show)}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-pink-500 transition-colors"
+          disabled={disabled}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-pink-500 transition-colors disabled:opacity-60"
         >
           {show ? <EyeOff size={18} /> : <Eye size={18} />}
         </button>
@@ -40,81 +55,156 @@ const InputField = ({ type, placeholder, icon: Icon }) => {
   );
 };
 
-// Auth Button
-const AuthButton = ({ children }) => (
+const SocialButton = ({ icon: Icon, children, className = "", disabled }) => (
   <button
-    type="submit"
-    className="w-full bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white font-semibold py-3 rounded-lg 
-               flex items-center justify-center shadow-lg hover:brightness-90 
-               hover:shadow-xl hover:scale-[1.03] active:scale-[0.97] 
-               transition-all duration-300 ease-out"
-  >
-    {children}
-  </button>
-);
-
-// Social Button
-const SocialButton = ({ icon: Icon, children, className = "" }) => (
-  <button
+    type="button"
+    disabled={disabled}
     className={`w-1/2 flex items-center justify-center py-2.5 border border-gray-300 rounded-lg 
                 text-sm font-semibold text-gray-700 bg-white
                 hover:bg-gray-50 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] 
-                transition-all duration-300 ${className}`}
+                transition-all duration-300 disabled:opacity-60 ${className}`}
   >
     {Icon && <Icon className="mr-2" size={18} />}
     {children}
   </button>
 );
 
+const AuthButton = ({ children, disabled }) => (
+  <button
+    type="submit"
+    disabled={disabled}
+    className="w-full bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white font-semibold py-3 rounded-lg 
+               flex items-center justify-center gap-2 shadow-lg hover:brightness-90 
+               hover:shadow-xl hover:scale-[1.03] active:scale-[0.97] 
+               transition-all duration-300 ease-out disabled:opacity-60"
+  >
+    {children}
+  </button>
+);
+
 const LoginPage = () => {
-  const handleSubmit = (e) => {
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const [login, { isLoading }] = useLoginWithUsernameMutation();
+
+  const [form, setForm] = useState({
+    username: "",
+    password: "",
+    remember: true,
+  });
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Login form submitted!");
+    if (!form.username || !form.password) {
+      toast.warn("Vui lòng nhập đủ tên đăng nhập và mật khẩu");
+      return;
+    }
+    try {
+      const res = await login({
+        username: form.username.trim(),
+        password: form.password,
+      }).unwrap();
+
+      if (res?.isSuccess && res?.data?.accessToken) {
+        dispatch(setCredentials({ ...res.data, remember: form.remember }));
+        toast.success("Đăng nhập thành công!");
+        navigate("/", { replace: true });
+      } else {
+        toast.error(res?.message || "Đăng nhập thất bại");
+      }
+    } catch (err) {
+      const msg =
+        err?.data?.message ||
+        err?.error ||
+        err?.message ||
+        "Đăng nhập thất bại";
+      console.error("Login error:", err);
+      toast.error(msg);
+    }
   };
 
   return (
     <>
       <form onSubmit={handleSubmit}>
-        <InputField type="email" placeholder="Email Address" icon={Mail} />
-        <InputField type="password" placeholder="Password" icon={Lock} />
+        <InputField
+          type="text"
+          placeholder="Tên đăng nhập"
+          icon={User}
+          value={form.username}
+          onChange={(e) => setForm((s) => ({ ...s, username: e.target.value }))}
+          disabled={isLoading}
+        />
+        <InputField
+          type="password"
+          placeholder="Mật khẩu"
+          icon={Lock}
+          value={form.password}
+          onChange={(e) => setForm((s) => ({ ...s, password: e.target.value }))}
+          disabled={isLoading}
+        />
 
         <div className="flex items-center justify-between mb-6 text-sm">
           <label className="flex items-center">
             <input
               type="checkbox"
+              checked={form.remember}
+              onChange={(e) =>
+                setForm((s) => ({ ...s, remember: e.target.checked }))
+              }
+              disabled={isLoading}
               className="w-4 h-4 text-pink-600 border-gray-300 rounded focus:ring-pink-500"
             />
-            <span className="ml-2 text-gray-600">Remember me</span>
+            <span className="ml-2 text-gray-600">Ghi nhớ đăng nhập</span>
           </label>
           <Link
             to={endPoint.FORGOTPASSWORD}
-            className="text-pink-500 font-semibold hover:text-pink-600 hover:underline transition-colors"
+            className="text-pink-500 font-medium hover:text-pink-600 hover:brightness-75 hover:underline transition-colors"
           >
-            Forgot Password?
+            Quên mật khẩu?
           </Link>
         </div>
 
-        <AuthButton>
-          Sign In
-          <svg className="w-4 h-4 ml-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+        <AuthButton disabled={isLoading}>
+          {isLoading && (
+            <LoadingSpinner
+              inline
+              size="5"
+              color="white"
+              className="border-4" // override border-3
+            />
+          )}
+          {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
+          <svg
+            className="w-4 h-4 ml-2"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"
+            />
           </svg>
         </AuthButton>
       </form>
 
-      {/* Divider */}
       <div className="my-6 flex items-center">
         <div className="flex-grow border-t border-gray-300"></div>
-        <span className="mx-4 text-sm text-gray-500">Or continue with</span>
+        <span className="mx-4 text-sm text-gray-500">Hoặc tiếp tục với</span>
         <div className="flex-grow border-t border-gray-300"></div>
       </div>
 
-      {/* Social login */}
       <div className="flex gap-4">
-        <SocialButton icon={FcGoogle}>Google</SocialButton>
+        <SocialButton icon={FcGoogle} disabled={isLoading}>
+          Google
+        </SocialButton>
         <SocialButton
           icon={() => <FaFacebook className="w-5 h-5 mr-2 text-blue-600" />}
           className="text-blue-600 hover:bg-blue-50"
+          disabled={isLoading}
         >
           Facebook
         </SocialButton>

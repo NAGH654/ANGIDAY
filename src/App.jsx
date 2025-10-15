@@ -5,13 +5,10 @@ import {
   Navigate,
 } from "react-router-dom";
 import { endPoint } from "@routes/router";
-
 // Auth wrapper
 import AuthPage from "@pages/Auth/AuthPage";
-
 // Home Layout
 import HomeLayout from "@layout/HomeLayout";
-
 // Public pages
 import HomePage from "@pages/HomePage/mainLayout";
 import CommunityPage from "@pages/CommunityPage/communityPage";
@@ -23,6 +20,7 @@ import CardDetailPage from "@pages/CardDetailPage";
 import MenuPage from "@pages/CardDetailPage/MenuPage";
 import ReviewDetailPage from "@pages/CardDetailPage/ReviewDetailPage";
 import EditRestaurantProfilePage from "@pages/Profile/RestaurantProfile/EditRestaurantProfilePage";
+import OnboardingPage from "@pages/Auth/OnboardingPage";
 
 function App() {
   return (
@@ -59,6 +57,9 @@ function App() {
 
         {/* Auth (login/register/forgot) */}
         <Route path={endPoint.AUTH} element={<AuthPage />} />
+
+        {/* Onboarding */}
+        <Route path={endPoint.ONBOARDING} element={<OnboardingPage />} />
 
         {/* 404 fallback */}
         <Route path="*" element={<h1>404 - Page Not Found</h1>} />

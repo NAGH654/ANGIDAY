@@ -26,4 +26,14 @@ export default defineConfig({
       "@hooks": path.resolve(__dirname, "./src/hooks"),
     },
   },
+  // ⬇️ Proxy để gọi /api → Railway (dev không dính CORS)
+  server: {
+    proxy: {
+      "/api": {
+        target: "https://angiday-production-c5c0.up.railway.app",
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
 });
