@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useMemo as useReactMemo } from "react";
 import { Search } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import CustomerSideBar from "@layout/SideBar";
@@ -7,13 +7,59 @@ import { endPoint } from "@routes/router";
 // Components
 import PostCard from "./components/postCard.jsx";
 import RightSidebar from "./components/rightSideBar.jsx";
-import { defaultPosts, topUsers, user } from "./data/data";
+import { topUsers, user } from "./data/data";
+import { useGetMyCommunityPostsQuery, useGetBookmarkedPostsQuery, useBookmarkPostMutation, useUnbookmarkPostMutation } from "@redux/api/userApi";
 
 function CommunityPage() {
   const navigate = useNavigate();
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [postList, setPostList] = useState(defaultPosts);
+  const { data: myPosts, isLoading } = useGetMyCommunityPostsQuery();
+  const { data: bookmarkedList } = useGetBookmarkedPostsQuery();
+
+  // map API -> UI post shape and merge with mock until backend has multiple
+  const apiMappedPosts = useMemo(() => {
+    if (!myPosts || myPosts.length === 0) return [];
+    // Build a Set of bookmarked ids for quick lookup
+    const bookmarkedIds = new Set(
+      (Array.isArray(bookmarkedList) ? bookmarkedList : [])
+        .map((b) => b?.id ?? b?.postId)
+        .filter(Boolean)
+    );
+    return myPosts.map((p, idx) => ({
+      id: p.id ?? p.postId ?? idx + 1000,
+      author: {
+        name: p.username || "Bạn",
+        avatar:
+          "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=60&h=60&fit=crop&crop=face",
+        time: p.createdAt ? new Date(p.createdAt).toLocaleString() : "",
+        verified: false,
+        location: "",
+      },
+      title: p.title || p.type || "Bài viết",
+      content: p.content || "",
+      foodList: [],
+      image: null,
+      interactions: {
+        likes: 0,
+        comments: 0,
+        shares: 0,
+        saves: 0,
+      },
+      isLiked: false,
+      isSaved: bookmarkedIds.has(p.id ?? p.postId),
+      tags: [],
+      isPopular: false,
+    }));
+  }, [myPosts, bookmarkedList]);
+
+  const [postList, setPostList] = useState([]);
+
+  React.useEffect(() => {
+    // Use only API posts; empty list will show empty state
+    if (apiMappedPosts.length > 0) setPostList(apiMappedPosts);
+    else setPostList([]);
+  }, [apiMappedPosts]);
 
   const handleLike = (postId) => {
     setPostList((prev) =>
@@ -34,10 +80,34 @@ function CommunityPage() {
     );
   };
 
-  const handleSave = (postId) => {
-    setPostList((prev) =>
-      prev.map((p) => (p.id === postId ? { ...p, isSaved: !p.isSaved } : p))
-    );
+  const [bookmarkPost] = useBookmarkPostMutation();
+  const [unbookmarkPost] = useUnbookmarkPostMutation();
+  const [toast, setToast] = React.useState(null);
+
+  const showToast = (message, type = "success") => {
+    setToast({ message, type });
+    window.clearTimeout(showToast._t);
+    showToast._t = window.setTimeout(() => setToast(null), 2000);
+  };
+
+  const handleSave = async (postId) => {
+    // decide current state
+    const isCurrentlySaved = postList.find((p) => p.id === postId)?.isSaved;
+    // optimistic toggle
+    setPostList((prev) => prev.map((p) => (p.id === postId ? { ...p, isSaved: !p.isSaved } : p)));
+    try {
+      if (isCurrentlySaved) {
+        await unbookmarkPost(postId).unwrap();
+        showToast("Đã xóa khỏi lưu", "info");
+      } else {
+        await bookmarkPost(postId).unwrap();
+        showToast("Đã lưu bài viết", "success");
+      }
+    } catch (e) {
+      // rollback on error
+      setPostList((prev) => prev.map((p) => (p.id === postId ? { ...p, isSaved: !p.isSaved } : p)));
+      showToast("Thao tác thất bại", "error");
+    }
   };
 
   const filteredPosts = useMemo(() => {
@@ -56,6 +126,11 @@ function CommunityPage() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-purple-50/30 to-pink-50/30 flex">
       <CustomerSideBar />
       <main className="flex-1 lg:ml-20">
+        {toast && (
+          <div className={`fixed top-4 right-4 z-50 px-4 py-2 rounded-xl shadow text-white ${toast.type === "success" ? "bg-emerald-500" : toast.type === "info" ? "bg-blue-500" : "bg-rose-500"}`}>
+            {toast.message}
+          </div>
+        )}
         {/* Toolbar */}
         <div className="max-w-7xl mx-auto px-6 pt-7">
           <div className="flex items-center justify-between gap-5 bg-white p-3 rounded-xl">
@@ -100,6 +175,13 @@ function CommunityPage() {
             </div>
 
             <div className="space-y-7">
+              {isLoading && (
+                <>
+                  <div className="animate-pulse bg-white/80 rounded-2xl border border-white/60 h-40" />
+                  <div className="animate-pulse bg-white/80 rounded-2xl border border-white/60 h-40" />
+                  <div className="animate-pulse bg-white/80 rounded-2xl border border-white/60 h-40" />
+                </>
+              )}
               {filteredPosts.map((post) => (
                 <PostCard
                   key={post.id}
@@ -108,7 +190,7 @@ function CommunityPage() {
                   onSave={handleSave}
                 />
               ))}
-              {filteredPosts.length === 0 && (
+              {filteredPosts.length === 0 && !isLoading && (
                 <div className="text-center py-14 bg-white/80 rounded-2xl border border-white/60">
                   <p className="text-gray-500">
                     Không tìm thấy kết quả phù hợp.

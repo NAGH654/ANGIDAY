@@ -57,6 +57,7 @@ const fallbackEP = {
   FAVORITE_RESTAURANTS: "favorites/restaurants",
   ORDERS: "orders",
   VOUCHERS: "vouchers",
+  PACKAGE: "/package",
   HOMEPAGE: "/",
 };
 
@@ -71,6 +72,7 @@ const EP = {
     endPoint?.FAVORITE_RESTAURANTS || fallbackEP.FAVORITE_RESTAURANTS,
   ORDERS: endPoint?.ORDERS || fallbackEP.ORDERS,
   VOUCHERS: endPoint?.VOUCHERS || fallbackEP.VOUCHERS,
+  PACKAGE: endPoint?.PACKAGE || fallbackEP.PACKAGE,
   HOMEPAGE: endPoint?.HOMEPAGE || fallbackEP.HOMEPAGE,
 };
 
@@ -102,6 +104,14 @@ const UserMenu = ({
       color: "text-gray-700",
       hoverColor: "hover:bg-blue-50 hover:text-blue-700",
       iconBg: "group-hover:bg-blue-100",
+    },
+    {
+      icon: Sparkles,
+      label: "Gói dịch vụ",
+      to: EP.PACKAGE,
+      color: "text-gray-700",
+      hoverColor: "hover:bg-purple-50 hover:text-purple-700",
+      iconBg: "group-hover:bg-purple-100",
     },
     {
       icon: TicketPercent,
