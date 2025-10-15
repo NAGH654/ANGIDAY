@@ -1,14 +1,11 @@
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Navigate,
-} from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { endPoint } from "@routes/router";
 // Auth wrapper
 import AuthPage from "@pages/Auth/AuthPage";
 // Home Layout
 import HomeLayout from "@layout/HomeLayout";
+// Service
+import AuthTokenWatcher from "@services/authTokenWatcher";
 // Public pages
 import HomePage from "@pages/HomePage/mainLayout";
 import CommunityPage from "@pages/CommunityPage/communityPage";
@@ -22,7 +19,7 @@ import ReviewDetailPage from "@pages/CardDetailPage/ReviewDetailPage";
 import EditRestaurantProfilePage from "@pages/Profile/RestaurantProfile/EditRestaurantProfilePage";
 import OnboardingPage from "@pages/Auth/OnboardingPage";
 
-function App() {
+function AppRoutes() {
   return (
     <Router>
       <Routes>
@@ -36,12 +33,12 @@ function App() {
             element={<RestaurantBookMarkPage />}
           />
           <Route path={endPoint.POST_BOOKMARK} element={<PostBookMarkPage />} />
-          {/* ⬇️ Route chi tiết */}
+
+          {/* Chi tiết */}
           <Route
             path={endPoint.RESTAURANT_DETAIL()}
             element={<CardDetailPage />}
           />
-          {/* ⬇️ Trang menu đầy đủ */}
           <Route path={endPoint.RESTAURANT_MENU()} element={<MenuPage />} />
           <Route
             path={endPoint.RESTAURANT_REVIEWS()}
@@ -51,6 +48,7 @@ function App() {
             path={endPoint.RESTAURANT_EDIT()}
             element={<EditRestaurantProfilePage />}
           />
+
           {/* Package Page */}
           <Route path={endPoint.PACKAGE} element={<PackagePage />} />
         </Route>
@@ -65,6 +63,17 @@ function App() {
         <Route path="*" element={<h1>404 - Page Not Found</h1>} />
       </Routes>
     </Router>
+  );
+}
+
+function App() {
+  return (
+    <>
+      {/* Theo dõi & tự logout nếu token mất/hết hạn */}
+      <AuthTokenWatcher redirect="/" pollMs={100} />
+      {/* <CurrentUserHydrator /> */}
+      <AppRoutes />
+    </>
   );
 }
 

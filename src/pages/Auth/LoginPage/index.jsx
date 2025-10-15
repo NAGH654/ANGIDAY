@@ -9,7 +9,7 @@ import { toast } from "react-toastify";
 import { endPoint } from "@routes/router";
 import { useLoginWithUsernameMutation } from "@redux/api/authApi";
 import { setCredentials } from "@redux/features/authSlice";
-import LoadingSpinner from "@components/LoadingSpinner"; // ⬅️ import spinner
+import LoadingSpinner from "@components/LoadingSpinner";
 
 const InputField = ({
   type,
@@ -82,6 +82,35 @@ const AuthButton = ({ children, disabled }) => (
   </button>
 );
 
+// === NEW: make safe expiry no matter backend ===
+function ensureExpiry(tok, expUtc, expiresInSec) {
+  const NOW = Date.now();
+
+  // 1) expUtc hợp lệ & còn >30s
+  if (expUtc) {
+    const t = new Date(expUtc).getTime();
+    if (Number.isFinite(t) && t > NOW + 30_000)
+      return new Date(t).toISOString();
+  }
+
+  // 2) expiresIn giây
+  if (Number.isFinite(expiresInSec) && expiresInSec > 30) {
+    return new Date(NOW + expiresInSec * 1000).toISOString();
+  }
+
+  // 3) JWT exp
+  try {
+    const [, payload] = String(tok || "").split(".");
+    const obj = JSON.parse(atob(payload));
+    const ms = Number(obj?.exp) * 1000;
+    if (Number.isFinite(ms) && ms > NOW + 30_000)
+      return new Date(ms).toISOString();
+  } catch {}
+
+  // 4) Fallback 60 phút
+  return new Date(NOW + 60 * 60 * 1000).toISOString();
+}
+
 const LoginPage = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -105,8 +134,18 @@ const LoginPage = () => {
         password: form.password,
       }).unwrap();
 
-      if (res?.isSuccess && res?.data?.accessToken) {
-        dispatch(setCredentials({ ...res.data, remember: form.remember }));
+      const raw = res?.data ?? res;
+      const token = raw?.accessToken || raw?.token;
+
+      if (token) {
+        const safePayload = {
+          ...raw,
+          accessToken: token,
+          // cố định hạn dùng “hợp lệ”
+          expiresAtUtc: ensureExpiry(token, raw?.expiresAtUtc, raw?.expiresIn),
+          remember: form.remember,
+        };
+        dispatch(setCredentials(safePayload));
         toast.success("Đăng nhập thành công!");
         navigate("/", { replace: true });
       } else {
@@ -170,7 +209,7 @@ const LoginPage = () => {
               inline
               size="5"
               color="white"
-              className="border-4" // override border-3
+              className="border-4"
             />
           )}
           {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}

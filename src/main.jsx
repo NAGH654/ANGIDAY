@@ -5,10 +5,13 @@ import App from "./App.jsx";
 
 import { Provider } from "react-redux";
 import { store } from "@redux/store/store";
+import { loadFromStorage } from "@redux/features/authSlice";
 
 // ⬇️ Toastify
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+
+store.dispatch(loadFromStorage());
 
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>

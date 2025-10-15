@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { Link, useLocation } from "react-router-dom";
 import {
   ChevronDown,
@@ -14,17 +14,13 @@ import {
 } from "lucide-react";
 import AvatarUserImage from "@components/Avatar_User_Image";
 import { motion, AnimatePresence } from "framer-motion";
-
+import { cleanLogout } from "@utils/cleanLogout";
 // Nhận cả named lẫn default export cho endPoint để tránh vỡ import
 import * as RouterEP from "@routes/router";
 const endPoint = RouterEP.endPoint || RouterEP.default || RouterEP;
 
 // Selector auth tối giản
 const selectAuth = (s) => s.auth;
-
-// Xoá thông tin local khi logout
-const clearToken = () => localStorage.removeItem("auth");
-const clearProfile = () => {}; // nếu có util riêng thì thay vào
 
 // Hiển thị “vai trò” (nếu có)
 const roleInfo = (role) => {
@@ -85,7 +81,7 @@ const UserMenu = ({
 }) => {
   const { user, accessToken } = useSelector(selectAuth);
   const location = useLocation();
-
+  const dispatch = useDispatch();
   const [open, setOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
@@ -167,18 +163,13 @@ const UserMenu = ({
 
   // Logout
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
   const handleLogout = async () => {
     if (isLoggingOut) return;
     setOpen(false);
     setIsLoggingOut(true);
-    try {
-      await sleep(800);
-      clearToken();
-      clearProfile();
-      localStorage.removeItem("persist:root");
-    } finally {
-      window.location.replace(EP.HOMEPAGE);
-    }
+    await sleep(800);
+    cleanLogout(dispatch, { redirect: EP.HOMEPAGE });
   };
 
   const { label: roleLabel, gradient } = roleInfo(user?.role);
