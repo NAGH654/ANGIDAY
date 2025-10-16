@@ -5,6 +5,7 @@ import CustomerSideBar from "@layout/SideBar";
 import CategoryTabs from "./CategoryTabs";
 import RestaurantCard from "./RestaurantCard";
 import useDebouncedValue from "@hooks/useDebouncedValue";
+import OnboardingGate from "@components/onBoardingGate";
 
 const FoodHomepage = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -36,6 +37,9 @@ const FoodHomepage = () => {
       {/* Sidebar - Desktop */}
       <CustomerSideBar />
 
+      {/* Mở panel tag */}
+      <OnboardingGate />
+      
       {/* Main */}
       <main className="flex-1 lg:ml-20">
         {/* Categories (đã tách) */}

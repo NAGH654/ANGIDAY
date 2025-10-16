@@ -24,6 +24,7 @@ export default defineConfig({
       "@redux": path.resolve(__dirname, "./src/redux"),
       "@services": path.resolve(__dirname, "./src/services"),
       "@hooks": path.resolve(__dirname, "./src/hooks"),
+      "@lib": path.resolve(__dirname, "./src/lib"),
     },
   },
   // ⬇️ Proxy để gọi /api → Railway (dev không dính CORS)

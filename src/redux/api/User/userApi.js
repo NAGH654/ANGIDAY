@@ -1,4 +1,4 @@
-import { baseApi } from "./baseApi";
+import { baseApi } from "../baseApi";
 
 // User-related endpoints
 export const userApi = baseApi.injectEndpoints({
@@ -48,6 +48,10 @@ export const userApi = baseApi.injectEndpoints({
   overrideExisting: false,
 });
 
-export const { useGetMeQuery, useGetMyCommunityPostsQuery, useGetBookmarkedPostsQuery, useBookmarkPostMutation, useUnbookmarkPostMutation } = userApi;
-
-
+export const {
+  useGetMeQuery,
+  useGetMyCommunityPostsQuery,
+  useGetBookmarkedPostsQuery,
+  useBookmarkPostMutation,
+  useUnbookmarkPostMutation,
+} = userApi;

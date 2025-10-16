@@ -4,6 +4,7 @@ import { baseApi } from "../api/baseApi";
 import authReducer from "../features/authSlice";
 import { auth401Guard } from "../middlewares/auth401Guard";
 import { setupListeners } from "@reduxjs/toolkit/query";
+import { setupApiWithStore } from "@lib/api"; 
 
 export const store = configureStore({
   reducer: {
@@ -18,3 +19,4 @@ export const store = configureStore({
 });
 
 setupListeners(store.dispatch);
+setupApiWithStore(store, { redirect: "/" }); 

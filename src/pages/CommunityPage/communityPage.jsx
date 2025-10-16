@@ -8,7 +8,12 @@ import { endPoint } from "@routes/router";
 import PostCard from "./components/postCard.jsx";
 import RightSidebar from "./components/rightSideBar.jsx";
 import { topUsers, user } from "./data/data";
-import { useGetMyCommunityPostsQuery, useGetBookmarkedPostsQuery, useBookmarkPostMutation, useUnbookmarkPostMutation } from "@redux/api/userApi";
+import {
+  useGetMyCommunityPostsQuery,
+  useGetBookmarkedPostsQuery,
+  useBookmarkPostMutation,
+  useUnbookmarkPostMutation,
+} from "@redux/api/User/userApi.js";
 
 function CommunityPage() {
   const navigate = useNavigate();
@@ -94,7 +99,9 @@ function CommunityPage() {
     // decide current state
     const isCurrentlySaved = postList.find((p) => p.id === postId)?.isSaved;
     // optimistic toggle
-    setPostList((prev) => prev.map((p) => (p.id === postId ? { ...p, isSaved: !p.isSaved } : p)));
+    setPostList((prev) =>
+      prev.map((p) => (p.id === postId ? { ...p, isSaved: !p.isSaved } : p))
+    );
     try {
       if (isCurrentlySaved) {
         await unbookmarkPost(postId).unwrap();
@@ -105,7 +112,9 @@ function CommunityPage() {
       }
     } catch (e) {
       // rollback on error
-      setPostList((prev) => prev.map((p) => (p.id === postId ? { ...p, isSaved: !p.isSaved } : p)));
+      setPostList((prev) =>
+        prev.map((p) => (p.id === postId ? { ...p, isSaved: !p.isSaved } : p))
+      );
       showToast("Thao tác thất bại", "error");
     }
   };
@@ -127,7 +136,15 @@ function CommunityPage() {
       <CustomerSideBar />
       <main className="flex-1 lg:ml-20">
         {toast && (
-          <div className={`fixed top-4 right-4 z-50 px-4 py-2 rounded-xl shadow text-white ${toast.type === "success" ? "bg-emerald-500" : toast.type === "info" ? "bg-blue-500" : "bg-rose-500"}`}>
+          <div
+            className={`fixed top-4 right-4 z-50 px-4 py-2 rounded-xl shadow text-white ${
+              toast.type === "success"
+                ? "bg-emerald-500"
+                : toast.type === "info"
+                ? "bg-blue-500"
+                : "bg-rose-500"
+            }`}
+          >
             {toast.message}
           </div>
         )}

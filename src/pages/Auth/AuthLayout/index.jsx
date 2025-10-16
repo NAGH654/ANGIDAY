@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { endPoint } from "@routes/router";
-import OnboardingPage from "../OnboardingPage";
+import OnboardingPage from "../OnboardingModal";
 
 const AuthLayout = ({ children }) => {
   const [searchParams] = useSearchParams();
@@ -45,9 +45,7 @@ const AuthLayout = ({ children }) => {
       <div
         className={[
           "bg-white rounded-2xl shadow-2xl z-10",
-          isRegister
-            ? "w-full max-w-md p-8"
-            : "w-full max-w-md p-8",
+          isRegister ? "w-full max-w-md p-8" : "w-full max-w-md p-8",
         ].join(" ")}
       >
         {/* Logo */}

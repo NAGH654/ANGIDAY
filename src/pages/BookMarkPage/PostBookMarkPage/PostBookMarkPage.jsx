@@ -11,7 +11,10 @@ import ViewToggle from "./components/viewToggle";
 
 // data + hooks + utils
 import { POST_CATEGORIES } from "./data/data";
-import { useGetBookmarkedPostsQuery, useUnbookmarkPostMutation } from "@redux/api/userApi";
+import {
+  useGetBookmarkedPostsQuery,
+  useUnbookmarkPostMutation,
+} from "@redux/api/User/userApi";
 import useDebouncedValue from "@hooks/useDebouncedValue";
 import parseVnDate from "@utils/parseVnDate";
 
@@ -43,7 +46,12 @@ const PostBookMarkPage = () => {
   const [selectedCategory, setSelectedCategory] = useState("Tất cả");
 
   // Load bookmarked posts from API
-  const { data: apiPosts, isLoading, isFetching, refetch } = useGetBookmarkedPostsQuery();
+  const {
+    data: apiPosts,
+    isLoading,
+    isFetching,
+    refetch,
+  } = useGetBookmarkedPostsQuery();
   const mappedApiPosts = useMemo(() => {
     if (!apiPosts) return null; // explicit null to indicate API loaded but maybe empty
     if (apiPosts.length === 0) return [];
@@ -60,7 +68,11 @@ const PostBookMarkPage = () => {
       content: p.content || "",
       image: p.imageUrl || null,
       tags: p.postTags || [],
-      interactions: { likes: p.likes || 0, comments: p.comments || 0, shares: p.shares || 0 },
+      interactions: {
+        likes: p.likes || 0,
+        comments: p.comments || 0,
+        shares: p.shares || 0,
+      },
       bookmarkedDate: p.updatedAt || p.createdAt || "",
       category: p.category || "Review",
       isPopular: false,
@@ -138,7 +150,8 @@ const PostBookMarkPage = () => {
         break;
       case "recent":
         list.sort(
-          (a, b) => parseVnDate(b.bookmarkedDate) - parseVnDate(a.bookmarkedDate)
+          (a, b) =>
+            parseVnDate(b.bookmarkedDate) - parseVnDate(a.bookmarkedDate)
         );
         break;
       case "popular":
@@ -146,8 +159,12 @@ const PostBookMarkPage = () => {
         list.sort(
           (a, b) =>
             Number(b.isPopular) - Number(a.isPopular) ||
-            b.interactions.likes + b.interactions.comments + b.interactions.shares -
-              (a.interactions.likes + a.interactions.comments + a.interactions.shares)
+            b.interactions.likes +
+              b.interactions.comments +
+              b.interactions.shares -
+              (a.interactions.likes +
+                a.interactions.comments +
+                a.interactions.shares)
         );
         break;
     }

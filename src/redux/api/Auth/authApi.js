@@ -1,4 +1,4 @@
-import { baseApi } from "./baseApi";
+import { baseApi } from "../baseApi";
 
 /** RTK Query endpoints cho auth (JS thuần) */
 export const authApi = baseApi.injectEndpoints({

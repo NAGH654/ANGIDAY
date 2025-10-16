@@ -9,7 +9,7 @@ import {
   Plus,
 } from "lucide-react";
 import CustomerSideBar from "@layout/SideBar";
-import { useGetMeQuery } from "@redux/api/userApi";
+import { useGetMeQuery } from "@redux/api/User/userApi";
 
 function UserProfile() {
   const { data: me, isLoading, isError, refetch } = useGetMeQuery();
@@ -102,7 +102,9 @@ function UserProfile() {
                       <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-gray-900 leading-none">
                         {user.name}
                       </h1>
-                      <span className="text-sm text-gray-500">{user.handle}</span>
+                      <span className="text-sm text-gray-500">
+                        {user.handle}
+                      </span>
                     </div>
                     <div className="text-sm text-gray-600 mt-1">
                       {user.role}
@@ -126,7 +128,8 @@ function UserProfile() {
                     </div>
 
                     <div className="text-sm text-gray-600 mt-2">
-                      Hợp tác: <span className="font-medium">{user.contact}</span>
+                      Hợp tác:{" "}
+                      <span className="font-medium">{user.contact}</span>
                     </div>
                   </div>
                 </div>
@@ -144,7 +147,9 @@ function UserProfile() {
                       <div className="text-xl font-bold text-gray-900">
                         {user.stats.followers}
                       </div>
-                      <div className="text-xs text-gray-500">người theo dõi</div>
+                      <div className="text-xs text-gray-500">
+                        người theo dõi
+                      </div>
                     </div>
                     <div className="px-4 py-2 text-center">
                       <div className="text-xl font-bold text-gray-900">
@@ -157,7 +162,9 @@ function UserProfile() {
                   <div className="mt-3 flex justify-end">
                     <button className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-900 text-white hover:bg-gray-800 transition shadow-sm">
                       <Edit size={16} />
-                      <span className="text-sm font-medium">Chỉnh sửa trang cá nhân</span>
+                      <span className="text-sm font-medium">
+                        Chỉnh sửa trang cá nhân
+                      </span>
                     </button>
                   </div>
                 </div>

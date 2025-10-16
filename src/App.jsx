@@ -17,7 +17,7 @@ import CardDetailPage from "@pages/CardDetailPage";
 import MenuPage from "@pages/CardDetailPage/MenuPage";
 import ReviewDetailPage from "@pages/CardDetailPage/ReviewDetailPage";
 import EditRestaurantProfilePage from "@pages/Profile/RestaurantProfile/EditRestaurantProfilePage";
-import OnboardingPage from "@pages/Auth/OnboardingPage";
+import OnboardingPage from "@pages/Auth/OnboardingModal";
 import UserProfilePage from "@pages/Profile/UserProfile";
 
 function AppRoutes() {
@@ -62,9 +62,6 @@ function AppRoutes() {
 
         {/* Auth (login/register/forgot) */}
         <Route path={endPoint.AUTH} element={<AuthPage />} />
-
-        {/* Onboarding */}
-        <Route path={endPoint.ONBOARDING} element={<OnboardingPage />} />
 
         {/* 404 fallback */}
         <Route path="*" element={<h1>404 - Page Not Found</h1>} />

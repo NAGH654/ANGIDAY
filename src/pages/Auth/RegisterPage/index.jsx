@@ -3,7 +3,7 @@ import { User, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { FaFacebook } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
 import { useNavigate } from "react-router-dom";
-import { useRegisterMutation } from "@redux/api/authApi";
+import { useRegisterMutation } from "@redux/api/Auth/authApi";
 import { toast } from "react-toastify";
 import { endPoint } from "@routes/router";
 import LoadingSpinner from "@components/LoadingSpinner"; // ⬅️ import spinner

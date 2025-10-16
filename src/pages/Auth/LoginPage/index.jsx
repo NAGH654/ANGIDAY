@@ -7,7 +7,7 @@ import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
 
 import { endPoint } from "@routes/router";
-import { useLoginWithUsernameMutation } from "@redux/api/authApi";
+import { useLoginWithUsernameMutation } from "@redux/api/Auth/authApi";
 import { setCredentials } from "@redux/features/authSlice";
 import LoadingSpinner from "@components/LoadingSpinner";
 
