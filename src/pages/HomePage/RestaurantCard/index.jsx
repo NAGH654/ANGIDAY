@@ -4,10 +4,16 @@ import { Heart, Star, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
 import { endPoint } from "@routes/router";
 
-const RestaurantCard = ({ restaurant, onToggleFavorite }) => {
+const RestaurantCard = ({ restaurant, onToggleFavorite, isBookmarked }) => {
   const detailTo = {
     pathname: endPoint.RESTAURANT_DETAIL(restaurant.id),
     state: { restaurant }, // ⬅️ mang theo data, CardDetailPage có thể dùng luôn
+  };
+
+  const handleFav = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    onToggleFavorite?.(restaurant.id);
   };
 
   return (
@@ -31,20 +37,16 @@ const RestaurantCard = ({ restaurant, onToggleFavorite }) => {
 
         {/* Favorite: chặn nổi bọt để không điều hướng */}
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            onToggleFavorite(restaurant.id);
-          }}
+          onClick={handleFav}
           className="absolute top-3 right-3 w-9 h-9 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-all shadow-sm"
           aria-label={
-            restaurant.isFavorite ? "Bỏ yêu thích" : "Thêm vào yêu thích"
+            isBookmarked || restaurant.isFavorite ? "Bỏ lưu" : "Lưu nhà hàng"
           }
         >
           <Heart
             size={16}
             className={
-              restaurant.isFavorite
+              isBookmarked || restaurant.isFavorite
                 ? "text-pink-500 fill-current"
                 : "text-gray-600"
             }

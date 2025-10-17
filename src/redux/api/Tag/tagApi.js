@@ -7,9 +7,9 @@ export const tagApi = baseApi.injectEndpoints({
       query: () => ({ url: "/Tag" }),
       providesTags: ["Tag"],
     }),
-    // ⤵️ nếu backend có endpoint kiểm tra tag của user
+    // ⤵️ lấy tag của user theo API thực tế
     getMyTags: build.query({
-      query: () => ({ url: "/UserTag/me" }), // đổi path nếu API khác
+      query: () => ({ url: "/UserTag/user-tag" }),
     }),
     chooseTags: build.mutation({
       // body: [{ tagName: string, isDeleted: boolean }]
