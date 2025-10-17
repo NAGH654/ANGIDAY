@@ -44,6 +44,45 @@ export const userApi = baseApi.injectEndpoints({
         method: "DELETE",
       }),
     }),
+    // Restaurants bookmark
+    getBookmarkedRestaurants: build.query({
+      query: () => ({ url: "/Bookmark/restaurants" }),
+      providesTags: ["RestaurantBookmark"],
+      transformResponse: (response) => {
+        const payload = Array.isArray(response) ? response : response?.data ?? [];
+        return Array.isArray(payload) ? payload : [payload];
+      },
+    }),
+    bookmarkRestaurant: build.mutation({
+      query: (restaurantId) => ({
+        url: `/Bookmark/restaurants/${restaurantId}`,
+        method: "POST",
+      }),
+      invalidatesTags: ["RestaurantBookmark"],
+    }),
+    unbookmarkRestaurant: build.mutation({
+      query: (restaurantId) => ({
+        url: `/Bookmark/restaurants/${restaurantId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["RestaurantBookmark"],
+    }),
+    updateProfile: build.mutation({
+      query: (body) => ({
+        url: "/User/me",
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Auth"],
+    }),
+    updateAvatar: build.mutation({
+      query: (formData) => ({
+        url: "/User/me/avatar",
+        method: "PUT",
+        body: formData,
+      }),
+      invalidatesTags: ["Auth"],
+    }),
   }),
   overrideExisting: false,
 });
@@ -54,4 +93,9 @@ export const {
   useGetBookmarkedPostsQuery,
   useBookmarkPostMutation,
   useUnbookmarkPostMutation,
+  useGetBookmarkedRestaurantsQuery,
+  useBookmarkRestaurantMutation,
+  useUnbookmarkRestaurantMutation,
+  useUpdateProfileMutation,
+  useUpdateAvatarMutation,
 } = userApi;
