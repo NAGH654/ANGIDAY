@@ -21,8 +21,10 @@ import {
 import CustomerSideBar from "@layout/SideBar";
 import { useGetMeQuery, useUpdateProfileMutation, useUpdateAvatarMutation } from "@redux/api/User/userApi";
 import { BASE_URL } from "@redux/api/baseApi";
-import { usePresignUploadMutation } from "@redux/api/Storage/storageApi";
-import { useUploadMutation } from "@redux/api/Storage/storageApi";
+import { useDispatch } from "react-redux";
+import { endPoint } from "@routes/router";
+import { cleanLogout } from "@utils/cleanLogout";
+// remove presign/direct upload usage
 
 function stripTrailingApi(url) {
   if (!url) return "";
@@ -43,8 +45,8 @@ function UserProfile() {
   const { data: me, isLoading, isError, refetch } = useGetMeQuery();
   const [updateProfile] = useUpdateProfileMutation();
   const [updateAvatar] = useUpdateAvatarMutation();
-  const [presignUpload] = usePresignUploadMutation();
-  const [directUpload] = useUploadMutation();
+  const dispatch = useDispatch();
+  // remove presign/direct upload usage
   
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -60,7 +62,9 @@ function UserProfile() {
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [avatarSrc, setAvatarSrc] = useState(null);
   const [activeTab, setActiveTab] = useState('posts');
+  const [showLogoutToast, setShowLogoutToast] = useState(false);
 
+  // Initialize form data when user data loads
   React.useEffect(() => {
     if (me) {
       setFormData({
@@ -73,7 +77,8 @@ function UserProfile() {
         dateOfBirth: me.dateOfBirth || "",
       });
       if (me.avatarUrl && !avatarPreview) {
-        setAvatarSrc(buildAssetUrl(me.avatarUrl));
+        const base = String(BASE_URL || "").replace(/\/$/, "");
+        setAvatarSrc(`${base}/Storage/view?key=${encodeURIComponent(me.avatarUrl)}`);
       }
     }
   }, [me, avatarPreview]);
@@ -91,39 +96,24 @@ function UserProfile() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      let avatarKey = null;
+      // 1) update profile fields
+      await updateProfile(formData).unwrap();
+
+      // 2) upload avatar via PUT /api/User/me/avatar (multipart)
       if (selectedAvatar) {
-        try {
-          // 1) presign
-          const sign = await presignUpload({
-            fileName: selectedAvatar.name,
-            contentType: selectedAvatar.type || "application/octet-stream",
-            prefix: "avatars",
-          }).unwrap();
-          // 2) PUT to storage (may fail CORS depending on provider config)
-          const resp = await fetch(sign.url, {
-            method: sign.method || "PUT",
-            headers: { "Content-Type": sign.contentType || selectedAvatar.type || "application/octet-stream" },
-            body: selectedAvatar,
-          });
-          if (!resp.ok) throw new Error(`Upload failed with status ${resp.status}`);
-          avatarKey = sign.key;
-        } catch (err) {
-          // Fallback to direct upload through backend to avoid CORS
-          const up = await directUpload({ file: selectedAvatar, key: undefined }).unwrap();
-          avatarKey = up?.key || up; // backend may return { key }
-        }
+        const formDataAvatar = new FormData();
+        formDataAvatar.append('Avatar', selectedAvatar);
+        await updateAvatar(formDataAvatar).unwrap();
       }
-
-      const payload = { ...formData };
-      if (avatarKey) payload.avatarUrl = avatarKey;
-
-      await updateProfile(payload).unwrap();
 
       setIsEditOpen(false);
       setSelectedAvatar(null);
       setAvatarPreview(null);
-      refetch();
+      setShowLogoutToast(true);
+      // delay a bit to let user read toast then logout and redirect to login
+      setTimeout(() => {
+        cleanLogout(dispatch, { redirect: endPoint.LOGIN });
+      }, 1200);
     } catch (error) {
       console.error('Update failed:', error);
     }
@@ -618,6 +608,12 @@ function UserProfile() {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {showLogoutToast && (
+        <div className="fixed top-4 right-4 z-50 px-4 py-2 rounded-xl shadow bg-amber-500 text-white font-medium">
+          Vui lòng đăng nhập lại để tiếp tục
         </div>
       )}
     </div>
