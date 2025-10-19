@@ -174,8 +174,15 @@ const LoginPage = () => {
 
       // Get current origin for debugging
       const currentOrigin = window.location.origin;
+      const currentUrl = window.location.href;
+      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "691877893987-6reciq92hak2439m1mchfona8gt1f6cn.apps.googleusercontent.com";
+      
+      console.log("🔍 Google Login Debug Info:");
       console.log("Current origin:", currentOrigin);
-      console.log("Google Client ID:", import.meta.env.VITE_GOOGLE_CLIENT_ID || "691877893987-6reciq92hak2439m1mchfona8gt1f6cn.apps.googleusercontent.com");
+      console.log("Current URL:", currentUrl);
+      console.log("Google Client ID:", clientId);
+      console.log("Environment:", import.meta.env.MODE);
+      console.log("Is Vercel:", currentOrigin.includes('vercel.app'));
 
       // Configure Google OAuth
       window.google.accounts.id.initialize({
@@ -190,31 +197,41 @@ const LoginPage = () => {
         console.log("Google login notification:", notification);
         
         if (notification.isNotDisplayed()) {
-          console.log("Google login prompt not displayed:", notification);
-          if (notification.getNotDisplayedReason() === "unregistered_origin") {
-            toast.error("Domain chưa được đăng ký. Vui lòng thêm localhost vào Google Console.");
-            // Fallback: try renderButton method
-            console.log("Trying fallback renderButton method...");
-            try {
-              window.google.accounts.id.renderButton(
-                document.getElementById("google-signin-button"),
-                {
-                  theme: "outline",
-                  size: "large",
-                  text: "signin_with",
-                  shape: "rectangular",
-                  logo_alignment: "left",
-                }
-              );
-            } catch (fallbackError) {
-              console.error("Fallback also failed:", fallbackError);
-            }
+          console.log("❌ Google login prompt not displayed:", notification);
+          const reason = notification.getNotDisplayedReason();
+          console.log("❌ Reason:", reason);
+          
+          if (reason === "unregistered_origin") {
+            toast.error(`Domain ${currentOrigin} chưa được đăng ký. Vui lòng thêm vào Google Console.`);
+          } else if (reason === "invalid_client") {
+            toast.error("Client ID không hợp lệ. Vui lòng kiểm tra cấu hình.");
+          } else if (reason === "opt_out_or_no_session") {
+            toast.error("Người dùng đã từ chối hoặc không có session.");
           } else {
-            toast.error("Không thể hiển thị Google login. Vui lòng kiểm tra cấu hình.");
+            toast.error(`Không thể hiển thị Google login. Lý do: ${reason}`);
+          }
+          
+          // Fallback: try renderButton method
+          console.log("🔄 Trying fallback renderButton method...");
+          try {
+            window.google.accounts.id.renderButton(
+              document.getElementById("google-signin-button"),
+              {
+                theme: "outline",
+                size: "large",
+                text: "signin_with",
+                shape: "rectangular",
+                logo_alignment: "left",
+              }
+            );
+          } catch (fallbackError) {
+            console.error("❌ Fallback also failed:", fallbackError);
           }
         } else if (notification.isSkippedMoment()) {
-          console.log("Google login skipped:", notification);
+          console.log("⏭️ Google login skipped:", notification);
           toast.error("Google login bị bỏ qua. Vui lòng thử lại.");
+        } else {
+          console.log("✅ Google login prompt displayed successfully");
         }
       });
     } catch (error) {
