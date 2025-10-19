@@ -4,6 +4,15 @@ import { Star, MoreHorizontal, ThumbsUp, MessageCircle, Check } from "lucide-rea
 import { Link, useLocation, useParams } from "react-router-dom";
 import CustomerSideBar from "@layout/SideBar";
 import { endPoint } from "@routes/router";
+import { BASE_URL } from "@redux/api/baseApi";
+
+/** ===== Helper functions ===== */
+const getImageUrl = (imageUrl) => {
+  if (!imageUrl) return null;
+  if (imageUrl.startsWith('http')) return imageUrl;
+  if (imageUrl.startsWith('blob:')) return null; // Skip blob URLs
+  return `${BASE_URL}/Storage/view?key=${encodeURIComponent(imageUrl)}`;
+};
 
 /** ===== Mock/fallback (sẽ dùng khi không truyền state) ===== */
 const fallbackRestaurant = {
@@ -141,14 +150,26 @@ const ReviewCard = ({ review }) => {
 
           {!!review.images?.length && (
             <div className="flex gap-2 mt-3">
-              {review.images.map((src, i) => (
-                <img
-                  key={i}
-                  src={src}
-                  alt="review"
-                  className="w-28 h-20 object-cover rounded-lg border border-gray-100"
-                />
-              ))}
+              {review.images.map((src, i) => {
+                const imageUrl = getImageUrl(src);
+                if (!imageUrl) return null;
+                
+                return (
+                  <img
+                    key={i}
+                    src={imageUrl}
+                    alt="review"
+                    className="w-28 h-20 object-cover rounded-lg border border-gray-100"
+                    onError={(e) => {
+                      console.log("❌ Image failed to load:", imageUrl);
+                      e.target.style.display = 'none';
+                    }}
+                    onLoad={() => {
+                      console.log("✅ Image loaded successfully:", imageUrl);
+                    }}
+                  />
+                );
+              })}
             </div>
           )}
 

@@ -7,7 +7,7 @@ import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
 
 import { endPoint } from "@routes/router";
-import { useLoginWithUsernameMutation } from "@redux/api/Auth/authApi";
+import { useLoginWithUsernameMutation, useLoginWithGoogleMutation } from "@redux/api/Auth/authApi";
 import { setCredentials } from "@redux/features/authSlice";
 import LoadingSpinner from "@components/LoadingSpinner";
 
@@ -55,9 +55,10 @@ const InputField = ({
   );
 };
 
-const SocialButton = ({ icon: Icon, children, className = "", disabled }) => (
+const SocialButton = ({ icon: Icon, children, className = "", disabled, onClick }) => (
   <button
     type="button"
+    onClick={onClick}
     disabled={disabled}
     className={`w-1/2 flex items-center justify-center py-2.5 border border-gray-300 rounded-lg 
                 text-sm font-semibold text-gray-700 bg-white
@@ -115,6 +116,7 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [login, { isLoading }] = useLoginWithUsernameMutation();
+  const [loginWithGoogle, { isLoading: isGoogleLoading }] = useLoginWithGoogleMutation();
 
   const [form, setForm] = useState({
     username: "",
@@ -158,6 +160,106 @@ const LoginPage = () => {
         err?.message ||
         "Đăng nhập thất bại";
       console.error("Login error:", err);
+      toast.error(msg);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      // Initialize Google Identity Services
+      if (typeof window.google === 'undefined') {
+        toast.error("Google OAuth chưa được tải. Vui lòng thử lại sau.");
+        return;
+      }
+
+      // Get current origin for debugging
+      const currentOrigin = window.location.origin;
+      console.log("Current origin:", currentOrigin);
+      console.log("Google Client ID:", import.meta.env.VITE_GOOGLE_CLIENT_ID || "691877893987-6reciq92hak2439m1mchfona8gt1f6cn.apps.googleusercontent.com");
+
+      // Configure Google OAuth
+      window.google.accounts.id.initialize({
+        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || "691877893987-6reciq92hak2439m1mchfona8gt1f6cn.apps.googleusercontent.com",
+        callback: handleGoogleCallback,
+        auto_select: false,
+        cancel_on_tap_outside: true,
+      });
+
+      // Prompt for Google login
+      window.google.accounts.id.prompt((notification) => {
+        console.log("Google login notification:", notification);
+        
+        if (notification.isNotDisplayed()) {
+          console.log("Google login prompt not displayed:", notification);
+          if (notification.getNotDisplayedReason() === "unregistered_origin") {
+            toast.error("Domain chưa được đăng ký. Vui lòng thêm localhost vào Google Console.");
+            // Fallback: try renderButton method
+            console.log("Trying fallback renderButton method...");
+            try {
+              window.google.accounts.id.renderButton(
+                document.getElementById("google-signin-button"),
+                {
+                  theme: "outline",
+                  size: "large",
+                  text: "signin_with",
+                  shape: "rectangular",
+                  logo_alignment: "left",
+                }
+              );
+            } catch (fallbackError) {
+              console.error("Fallback also failed:", fallbackError);
+            }
+          } else {
+            toast.error("Không thể hiển thị Google login. Vui lòng kiểm tra cấu hình.");
+          }
+        } else if (notification.isSkippedMoment()) {
+          console.log("Google login skipped:", notification);
+          toast.error("Google login bị bỏ qua. Vui lòng thử lại.");
+        }
+      });
+    } catch (error) {
+      console.error("Google login error:", error);
+      toast.error("Không thể đăng nhập với Google. Vui lòng thử lại.");
+    }
+  };
+
+  const handleGoogleCallback = async (response) => {
+    try {
+      const { credential } = response;
+      
+      if (!credential) {
+        toast.error("Không thể lấy thông tin từ Google.");
+        return;
+      }
+
+      // Call backend API with Google ID token
+      const res = await loginWithGoogle({
+        idToken: credential,
+      }).unwrap();
+
+      const raw = res?.data ?? res;
+      const token = raw?.accessToken || raw?.token;
+
+      if (token) {
+        const safePayload = {
+          ...raw,
+          accessToken: token,
+          expiresAtUtc: ensureExpiry(token, raw?.expiresAtUtc, raw?.expiresIn),
+          remember: true, // Google login always remember
+        };
+        dispatch(setCredentials(safePayload));
+        toast.success("Đăng nhập Google thành công!");
+        navigate("/", { replace: true });
+      } else {
+        toast.error(res?.message || "Đăng nhập Google thất bại");
+      }
+    } catch (err) {
+      const msg =
+        err?.data?.message ||
+        err?.error ||
+        err?.message ||
+        "Đăng nhập Google thất bại";
+      console.error("Google login error:", err);
       toast.error(msg);
     }
   };
@@ -237,8 +339,12 @@ const LoginPage = () => {
       </div>
 
       <div className="flex gap-4">
-        <SocialButton icon={FcGoogle} disabled={isLoading}>
-          Google
+        <SocialButton 
+          icon={FcGoogle} 
+          disabled={isLoading || isGoogleLoading}
+          onClick={handleGoogleLogin}
+        >
+          {isGoogleLoading ? "Đang đăng nhập..." : "Google"}
         </SocialButton>
         <SocialButton
           icon={() => <FaFacebook className="w-5 h-5 mr-2 text-blue-600" />}
@@ -248,6 +354,9 @@ const LoginPage = () => {
           Facebook
         </SocialButton>
       </div>
+      
+      {/* Hidden div for Google fallback button */}
+      <div id="google-signin-button" className="hidden"></div>
     </>
   );
 };

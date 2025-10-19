@@ -10,7 +10,7 @@ import PostsSection from "./components/PostsSection";
 import ReviewsSection from "./components/ReviewsSection";
 import RightSidebar from "./components/RightSidebar";
 
-import { useGetRestaurantByIdQuery } from "@redux/api/Restaurant/restaurantApi";
+import { useGetRestaurantByIdQuery, useGetRestaurantReviewsQuery, useGetRestaurantPostsQuery, useGetSignatureFoodsQuery } from "@redux/api/Restaurant/restaurantApi";
 import { BASE_URL } from "@redux/api/baseApi";
 
 const ImageParams = "?w=960&h=540&fit=crop";
@@ -18,6 +18,9 @@ const ImageParams = "?w=960&h=540&fit=crop";
 const CardDetailPage = () => {
   const { id } = useParams();
   const { data: r, isLoading } = useGetRestaurantByIdQuery(id);
+  const { data: reviewsData, isLoading: reviewsLoading } = useGetRestaurantReviewsQuery(id);
+  const { data: postsData, isLoading: postsLoading } = useGetRestaurantPostsQuery(id);
+  const { data: menuItems, isLoading: menuLoading } = useGetSignatureFoodsQuery(id);
 
   // map API -> component props
   const restaurant = React.useMemo(() => {
@@ -32,11 +35,66 @@ const CardDetailPage = () => {
           : `https://images.unsplash.com/photo-1552566626-52f8b828add9${ImageParams}`,
       rating: r.averagePoint ?? 5,
       followers: r.totalFollowers ?? 0,
+      totalReviews: reviewsData?.length ?? 0,
       phoneNumber: r.phoneNumber || "",
       description: r.description || "",
       category: r.categoryName || "",
     };
-  }, [r]);
+  }, [r, reviewsData]);
+
+  // Transform reviews data for ReviewsSection
+  const reviews = React.useMemo(() => {
+    if (!reviewsData) return [];
+    return reviewsData.map((review) => ({
+      id: review.id,
+      content: review.content || "",
+      rating: 5, // API không có rating field, set default 5 sao
+      timeAgo: review.createdAt ? new Date(review.createdAt).toLocaleDateString('vi-VN') : "",
+      author: {
+        name: review.userName || "Khách hàng",
+        avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face", // API không có userAvatar
+        isRestaurant: false,
+      },
+      images: review.imageUrl ? [review.imageUrl] : [],
+      likes: 0, // API không có likes field
+      isReply: false,
+      signatureFoodName: review.signatureFoodName || "", // Thêm thông tin món ăn
+    }));
+  }, [reviewsData]);
+
+  // Calculate star distribution
+  const starDistribution = React.useMemo(() => {
+    if (!reviewsData) return [];
+    // Vì API không có rating field, tất cả feedback đều được tính là 5 sao
+    const total = reviewsData.length;
+    return [
+      { stars: 5, count: total, percentage: 100 },
+      { stars: 4, count: 0, percentage: 0 },
+      { stars: 3, count: 0, percentage: 0 },
+      { stars: 2, count: 0, percentage: 0 },
+      { stars: 1, count: 0, percentage: 0 },
+    ];
+  }, [reviewsData]);
+
+  // Transform posts data for PostsSection
+  const posts = React.useMemo(() => {
+    if (!postsData) return [];
+    return postsData.map((post) => ({
+      id: post.id,
+      title: post.type === "owner_post" ? "Bài viết từ chủ nhà hàng" : "Bài viết từ khách hàng",
+      content: post.content || "",
+      imageUrl: post.imageUrl,
+      timeAgo: post.createdAt ? new Date(post.createdAt).toLocaleDateString('vi-VN') : "",
+      type: post.type || "owner_post",
+      signatureFoodId: post.signatureFoodId,
+      badge: post.type === "owner_post" ? "Chủ nhà hàng" : "Khách hàng",
+      badgeColor: post.type === "owner_post" ? "bg-blue-100 text-blue-600" : "bg-green-100 text-green-600",
+      location: restaurant?.address || "",
+      likes: 0, // API không có field này
+      comments: 0, // API không có field này
+      shares: 0, // API không có field này
+    }));
+  }, [postsData, restaurant]);
 
   if (isLoading) {
     return (
@@ -74,9 +132,13 @@ const CardDetailPage = () => {
               <RestaurantInfoCard restaurant={restaurant} />
               <StatsBar rating={restaurant.rating} followers={restaurant.followers} />
               {/* Menu/Posts/Reviews: giữ tạm mock rỗng nếu chưa có API */}
-              <MenuSection restaurant={restaurant} items={[]} />
-              <PostsSection restaurant={restaurant} posts={[]} />
-              <ReviewsSection restaurant={restaurant} starDistribution={[]} reviews={[]} />
+              <MenuSection restaurant={restaurant} items={menuItems || []} />
+              <PostsSection restaurant={restaurant} posts={posts} />
+              <ReviewsSection 
+                restaurant={restaurant} 
+                starDistribution={starDistribution} 
+                reviews={reviews} 
+              />
             </div>
 
             {/* Sidebar */}

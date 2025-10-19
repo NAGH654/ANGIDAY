@@ -11,9 +11,14 @@ import { topUsers, user } from "./data/data";
 import {
   useGetMyCommunityPostsQuery,
   useGetBookmarkedPostsQuery,
+  useGetLikedPostsQuery,
   useBookmarkPostMutation,
   useUnbookmarkPostMutation,
+  useGetMeQuery,
+  useLikePostMutation,
+  useUnlikePostMutation,
 } from "@redux/api/User/userApi.js";
+import { BASE_URL } from "@redux/api/baseApi";
 
 function CommunityPage() {
   const navigate = useNavigate();
@@ -21,41 +26,81 @@ function CommunityPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const { data: myPosts, isLoading } = useGetMyCommunityPostsQuery();
   const { data: bookmarkedList } = useGetBookmarkedPostsQuery();
+  // const { data: likedList } = useGetLikedPostsQuery(); // Disabled until backend implements this endpoint
+  const { data: userData, isLoading: userLoading } = useGetMeQuery();
+
+  // Helper functions để lấy thông tin user
+  const getUserName = () => {
+    if (userLoading || !userData) return "User";
+    return userData.userName || userData.fullName || "User";
+  };
+
+  const getUserAvatar = () => {
+    if (userLoading || !userData?.avatarUrl) {
+      return "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=60&h=60&fit=crop&crop=face";
+    }
+    return `${BASE_URL}/Storage/view?key=${userData.avatarUrl}`;
+  };
+
+  const getUserInitial = () => {
+    const name = getUserName();
+    return name.charAt(0).toUpperCase();
+  };
 
   // map API -> UI post shape and merge with mock until backend has multiple
   const apiMappedPosts = useMemo(() => {
     if (!myPosts || myPosts.length === 0) return [];
+    
     // Build a Set of bookmarked ids for quick lookup
     const bookmarkedIds = new Set(
       (Array.isArray(bookmarkedList) ? bookmarkedList : [])
         .map((b) => b?.id ?? b?.postId)
         .filter(Boolean)
     );
-    return myPosts.map((p, idx) => ({
-      id: p.id ?? p.postId ?? idx + 1000,
-      author: {
-        name: p.username || "Bạn",
-        avatar:
-          "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=60&h=60&fit=crop&crop=face",
-        time: p.createdAt ? new Date(p.createdAt).toLocaleString() : "",
-        verified: false,
-        location: "",
-      },
-      title: p.title || p.type || "Bài viết",
-      content: p.content || "",
-      foodList: [],
-      image: null,
-      interactions: {
-        likes: 0,
-        comments: 0,
-        shares: 0,
-        saves: 0,
-      },
-      isLiked: false,
-      isSaved: bookmarkedIds.has(p.id ?? p.postId),
-      tags: [],
-      isPopular: false,
-    }));
+    
+    // Build a Set of liked ids for quick lookup (using localStorage until backend implements API)
+    const likedIds = new Set(
+      JSON.parse(localStorage.getItem('likedPosts') || '[]')
+    );
+    
+    return myPosts.map((p, idx) => {
+      const mappedPost = {
+        id: p.id ?? p.postId ?? idx + 1000,
+        author: {
+          name: p.username || "Bạn",
+          avatar: p.userAvatar 
+            ? `${BASE_URL}/Storage/view?key=${p.userAvatar}`
+            : "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=60&h=60&fit=crop&crop=face",
+          time: p.createdAt ? new Date(p.createdAt).toLocaleString() : "",
+          verified: false,
+          location: "",
+        },
+        title: p.title || p.type || "Bài viết",
+        content: p.content || "",
+        foodList: [],
+        image: p.imageUrl && !p.imageUrl.startsWith('blob:') ? `${BASE_URL}/Storage/view?key=${p.imageUrl}` : null,
+        hasInvalidImage: p.imageUrl?.startsWith('blob:'),
+        interactions: {
+          likes: 0,
+          comments: 0,
+          shares: 0,
+          saves: 0,
+        },
+        isLiked: likedIds.has(p.id ?? p.postId),
+        isSaved: bookmarkedIds.has(p.id ?? p.postId),
+        tags: [],
+        isPopular: false,
+      };
+      
+      // Debug log cho avatar
+      console.log(`Post ${idx} - Avatar:`, {
+        userAvatar: p.userAvatar,
+        hasUserAvatar: !!p.userAvatar,
+        finalAvatarUrl: mappedPost.author.avatar
+      });
+      
+      return mappedPost;
+    });
   }, [myPosts, bookmarkedList]);
 
   const [postList, setPostList] = useState([]);
@@ -66,7 +111,11 @@ function CommunityPage() {
     else setPostList([]);
   }, [apiMappedPosts]);
 
-  const handleLike = (postId) => {
+  const handleLike = async (postId) => {
+    // decide current state
+    const isCurrentlyLiked = postList.find((p) => p.id === postId)?.isLiked;
+    
+    // optimistic toggle
     setPostList((prev) =>
       prev.map((p) =>
         p.id === postId
@@ -83,10 +132,51 @@ function CommunityPage() {
           : p
       )
     );
+    
+    try {
+      if (isCurrentlyLiked) {
+        await unlikePost(postId).unwrap();
+        // Remove from localStorage
+        const currentLiked = JSON.parse(localStorage.getItem('likedPosts') || '[]');
+        const updatedLiked = currentLiked.filter(id => id !== postId);
+        localStorage.setItem('likedPosts', JSON.stringify(updatedLiked));
+        showToast("Đã bỏ thích bài viết", "info");
+      } else {
+        await likePost(postId).unwrap();
+        // Add to localStorage
+        const currentLiked = JSON.parse(localStorage.getItem('likedPosts') || '[]');
+        if (!currentLiked.includes(postId)) {
+          currentLiked.push(postId);
+          localStorage.setItem('likedPosts', JSON.stringify(currentLiked));
+        }
+        showToast("Đã thích bài viết", "success");
+      }
+    } catch (e) {
+      // rollback on error
+      setPostList((prev) =>
+        prev.map((p) =>
+          p.id === postId
+            ? {
+                ...p,
+                isLiked: !p.isLiked,
+                interactions: {
+                  ...p.interactions,
+                  likes: p.isLiked
+                    ? p.interactions.likes - 1
+                    : p.interactions.likes + 1,
+                },
+              }
+            : p
+        )
+      );
+      showToast("Thao tác thất bại", "error");
+    }
   };
 
   const [bookmarkPost] = useBookmarkPostMutation();
   const [unbookmarkPost] = useUnbookmarkPostMutation();
+  const [likePost] = useLikePostMutation();
+  const [unlikePost] = useUnlikePostMutation();
   const [toast, setToast] = React.useState(null);
 
   const showToast = (message, type = "success") => {
@@ -179,9 +269,17 @@ function CommunityPage() {
           <div className="flex-1 min-w-0">
             <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow border border-white/60 p-6 mb-7">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center text-white font-bold">
-                  {user.avatar}
-                </div>
+                {userData?.avatarUrl ? (
+                  <img
+                    src={getUserAvatar()}
+                    alt={getUserName()}
+                    className="w-12 h-12 rounded-full object-cover border border-gray-100"
+                  />
+                ) : (
+                  <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center text-white font-bold">
+                    {getUserInitial()}
+                  </div>
+                )}
                 <button
                   onClick={() => navigate(endPoint.POST)}
                   className="flex-1 text-left px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-500 text-[15px] hover:bg-gray-100 transition"

@@ -16,14 +16,18 @@ import {
   Mail,
   Phone,
   Sparkles,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Star,
+  Trash2,
+  Loader2
 } from "lucide-react";
 import CustomerSideBar from "@layout/SideBar";
-import { useGetMeQuery, useUpdateProfileMutation, useUpdateAvatarMutation } from "@redux/api/User/userApi";
+import { useGetMeQuery, useUpdateProfileMutation, useUpdateAvatarMutation, useGetMyCommunityPostsQuery, useGetUserCommunityPostsQuery, useGetMyReviewsQuery, useDeletePostMutation } from "@redux/api/User/userApi";
 import { BASE_URL } from "@redux/api/baseApi";
 import { useDispatch } from "react-redux";
 import { endPoint } from "@routes/router";
 import { cleanLogout } from "@utils/cleanLogout";
+import toast from "react-hot-toast";
 // remove presign/direct upload usage
 
 function stripTrailingApi(url) {
@@ -45,6 +49,13 @@ function UserProfile() {
   const { data: me, isLoading, isError, refetch } = useGetMeQuery();
   const [updateProfile] = useUpdateProfileMutation();
   const [updateAvatar] = useUpdateAvatarMutation();
+  const { data: myPosts, isLoading: postsLoading, error: postsError } = useGetMyCommunityPostsQuery();
+  // Alternative endpoint for user-specific posts (disabled due to 404)
+  const { data: userPosts, isLoading: userPostsLoading } = useGetUserCommunityPostsQuery(me?.id, {
+    skip: true // Disabled because endpoint doesn't exist on backend
+  });
+  const { data: myReviews, isLoading: reviewsLoading, error: reviewsError } = useGetMyReviewsQuery();
+  const [deletePost] = useDeletePostMutation();
   const dispatch = useDispatch();
   // remove presign/direct upload usage
   
@@ -63,6 +74,41 @@ function UserProfile() {
   const [avatarSrc, setAvatarSrc] = useState(null);
   const [activeTab, setActiveTab] = useState('posts');
   const [showLogoutToast, setShowLogoutToast] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const postsPerPage = 6;
+  const [openDropdownId, setOpenDropdownId] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteItem, setDeleteItem] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  // Close dropdown when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (openDropdownId && !event.target.closest('.relative')) {
+        setOpenDropdownId(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [openDropdownId]);
+
+  // Handle ESC key to close modal
+  React.useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape' && showDeleteModal) {
+        handleCancelDelete();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showDeleteModal]);
 
   // Initialize form data when user data loads
   React.useEffect(() => {
@@ -95,6 +141,7 @@ function UserProfile() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsUpdating(true);
     try {
       // 1) update profile fields
       await updateProfile(formData).unwrap();
@@ -116,8 +163,24 @@ function UserProfile() {
       }, 1200);
     } catch (error) {
       console.error('Update failed:', error);
+      toast.error('Không thể cập nhật hồ sơ. Vui lòng thử lại!');
+    } finally {
+      setIsUpdating(false);
     }
   };
+
+  // Calculate separate counts for posts and reviews
+  const postsCount = React.useMemo(() => {
+    const postsData = userPosts || myPosts;
+    if (!postsData || postsData.length === 0) return 0;
+    const filteredPosts = userPosts ? postsData : postsData.filter(post => post.userId === me?.id);
+    return filteredPosts.length;
+  }, [myPosts, userPosts, me?.id]);
+
+  const reviewsCount = React.useMemo(() => {
+    if (!myReviews || myReviews.length === 0) return 0;
+    return myReviews.filter(review => review.userId === me?.id).length;
+  }, [myReviews, me?.id]);
 
   const user = {
     name: me?.fullName || me?.fullname || me?.username || "Người dùng",
@@ -127,7 +190,8 @@ function UserProfile() {
     avatarBg: "from-pink-500 via-purple-500 to-indigo-500",
     cover: "https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=1200&h=360&fit=crop",
     stats: {
-      posts: me?.totalPosts ?? 24,
+      posts: postsCount,
+      reviews: reviewsCount,
       followers: me?.followers ?? me?.totalFollowers ?? 1258,
       following: me?.following ?? me?.totalFollowing ?? 436,
     },
@@ -140,28 +204,151 @@ function UserProfile() {
     verified: true,
   };
 
-  const mockPosts = [
-    {
-      id: 1,
-      title: 'Top 5 món ăn ngon ở Quận 1',
-      content: 'Chia sẻ những món ăn tuyệt vời mà tôi đã thử...',
-      image: 'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=600&h=400&fit=crop',
-      likes: 234,
-      comments: 45,
-      shares: 12,
-      timeAgo: '5 giờ trước'
-    },
-    {
-      id: 2,
-      title: 'Review Pizza 4P\'s - Trải nghiệm tuyệt vời',
-      content: 'Pizza ở đây thật sự đáng để thử!',
-      image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=600&h=400&fit=crop',
-      likes: 189,
-      comments: 32,
-      shares: 8,
-      timeAgo: '1 ngày trước'
+  // Map API posts to display format
+  const displayPosts = React.useMemo(() => {
+    // Try userPosts first (user-specific), then fallback to myPosts
+    const postsData = userPosts || myPosts;
+    
+    console.log("🔍 UserProfile Posts Debug:", {
+      myPosts: myPosts?.length || 0,
+      userPosts: userPosts?.length || 0,
+      postsError,
+      usingData: userPosts ? 'userPosts' : 'myPosts',
+      meId: me?.id,
+      allPosts: postsData?.map(p => ({ id: p.id, userId: p.userId, content: p.content?.substring(0, 30) }))
+    });
+    
+    if (!postsData || postsData.length === 0) return [];
+    
+    // Filter posts by current user ID if we're using myPosts (which contains all posts)
+    const filteredPosts = userPosts ? postsData : postsData.filter(post => post.userId === me?.id);
+    
+    console.log("🔍 Filtered Posts:", {
+      originalCount: postsData.length,
+      filteredCount: filteredPosts.length,
+      currentUserId: me?.id,
+      filteredPosts: filteredPosts.map(p => ({ id: p.id, userId: p.userId, content: p.content?.substring(0, 30) }))
+    });
+    
+    return filteredPosts.map((post, index) => ({
+      id: post.id || index + 1,
+      title: post.type || 'Bài viết',
+      content: post.content || '',
+      image: post.imageUrl && !post.imageUrl.startsWith('blob:') 
+        ? `${BASE_URL}/Storage/view?key=${post.imageUrl}` 
+        : null,
+      likes: post.totalLikes || 0,
+      comments: post.totalComments || 0,
+      shares: 0, // API không trả về số share
+      timeAgo: post.createdAt 
+        ? new Date(post.createdAt).toLocaleString('vi-VN', {
+            day: 'numeric',
+            month: 'numeric', 
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+        : 'Vừa xong'
+    }));
+  }, [myPosts, userPosts, postsError, me?.id]);
+
+  // Map API reviews to display format
+  const displayReviews = React.useMemo(() => {
+    if (!myReviews || myReviews.length === 0) return [];
+    
+    // Filter reviews by current user ID
+    const filteredReviews = myReviews.filter(review => review.userId === me?.id);
+    
+    console.log("🔍 UserProfile Reviews Debug:", {
+      allReviews: myReviews?.length || 0,
+      filteredReviews: filteredReviews.length,
+      currentUserId: me?.id,
+      reviews: filteredReviews.map(r => ({ id: r.id, userId: r.userId, content: r.content?.substring(0, 30), rating: r.rating }))
+    });
+    
+    return filteredReviews.map((review, index) => ({
+      id: review.id || index + 1,
+      title: 'Đánh giá nhà hàng',
+      content: review.content || '',
+      rating: review.rating || 5,
+      image: review.imageUrl && !review.imageUrl.startsWith('blob:') && review.imageUrl !== 'temp_image_url'
+        ? `${BASE_URL}/Storage/view?key=${review.imageUrl}` 
+        : null,
+      likes: review.totallikes || 0,
+      comments: review.totalComments || 0,
+      shares: 0,
+      timeAgo: review.createdAt 
+        ? new Date(review.createdAt).toLocaleString('vi-VN', {
+            day: 'numeric',
+            month: 'numeric', 
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+        : 'Vừa xong'
+    }));
+  }, [myReviews, me?.id]);
+
+  // Pagination logic
+  const currentData = activeTab === 'reviews' ? displayReviews : displayPosts;
+  const totalPages = Math.ceil(currentData.length / postsPerPage);
+  const startIndex = (currentPage - 1) * postsPerPage;
+  const endIndex = startIndex + postsPerPage;
+  const currentItems = currentData.slice(startIndex, endIndex);
+
+  // Reset to page 1 when data changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [currentData.length]);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    // Scroll to top of posts section
+    const postsSection = document.getElementById('posts-section');
+    if (postsSection) {
+      postsSection.scrollIntoView({ behavior: 'smooth' });
     }
-  ];
+  };
+
+  const handleDeletePost = async (postId, postType) => {
+    setIsDeleting(true);
+    try {
+      await deletePost(postId).unwrap();
+      toast.success(`${postType === 'reviews' ? 'Bài đánh giá' : 'Bài viết'} đã được xóa thành công!`);
+      setOpenDropdownId(null);
+      setShowDeleteModal(false);
+      setDeleteItem(null);
+    } catch (error) {
+      console.error('Delete failed:', error);
+      toast.error('Không thể xóa bài viết. Vui lòng thử lại!');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteClick = (postId, postType) => {
+    setDeleteItem({ id: postId, type: postType });
+    setShowDeleteModal(true);
+    setOpenDropdownId(null);
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteItem) {
+      handleDeletePost(deleteItem.id, deleteItem.type);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteModal(false);
+    setDeleteItem(null);
+  };
+
+  // Helper function for input styling
+  const getInputClassName = (baseClass) => {
+    return `${baseClass} ${
+      isUpdating ? 'bg-gray-100 cursor-not-allowed' : ''
+    }`;
+  };
 
   if (isLoading) {
     return (
@@ -244,9 +431,9 @@ function UserProfile() {
                         ) : null}
                         <div
                           className={`w-32 h-32 md:w-36 md:h-36 bg-gradient-to-br ${user.avatarBg} rounded-3xl flex items-center justify-center text-white text-5xl font-bold ring-8 ring-white shadow-2xl ${(avatarPreview || avatarSrc) ? 'hidden' : 'flex'}`}
-                        >
-                          {user.name?.[0] || "U"}
-                        </div>
+                >
+                  {user.name?.[0] || "U"}
+                </div>
                         
                         {/* Online Status */}
                         <div className="absolute bottom-2 right-2 w-6 h-6 bg-green-500 rounded-full ring-4 ring-white"></div>
@@ -257,8 +444,8 @@ function UserProfile() {
                     <div className="flex-1 pt-2">
                       <div className="flex items-center space-x-3 mb-2">
                         <h1 className="text-3xl md:text-4xl font-black bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 bg-clip-text text-transparent">
-                          {user.name}
-                        </h1>
+                      {user.name}
+                    </h1>
                         {user.verified && (
                           <div className="w-7 h-7 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center ring-4 ring-blue-100">
                             <span className="text-white text-sm font-bold">✓</span>
@@ -267,8 +454,8 @@ function UserProfile() {
                         <div className="flex items-center space-x-1 bg-gradient-to-r from-yellow-400 to-orange-400 px-3 py-1 rounded-full">
                           <Award size={14} className="text-white" />
                           <span className="text-xs font-bold text-white">VIP</span>
-                        </div>
-                      </div>
+                  </div>
+                  </div>
 
                       <p className="text-gray-600 text-lg mb-3">{user.handle} • {user.role}</p>
                       
@@ -279,45 +466,51 @@ function UserProfile() {
                         <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-pink-100 to-purple-100 text-purple-700 border border-purple-200">
                           <MapPin size={16} />
                           <span className="font-medium">{user.bioBadges[0]}</span>
-                        </span>
+                    </span>
                         {user.bioBadges.slice(1).map((badge, i) => (
-                          <span
-                            key={i}
+                      <span
+                        key={i}
                             className="px-4 py-2 rounded-full bg-gray-100 text-gray-700 border border-gray-200 font-medium"
-                          >
+                      >
                             {badge}
-                          </span>
-                        ))}
-                      </div>
+                      </span>
+                    ))}
+                  </div>
 
                       <div className="flex items-center space-x-2 text-gray-600">
                         <Mail size={16} />
                         <span className="font-medium">{user.contact}</span>
-                      </div>
-                    </div>
                   </div>
+                </div>
+              </div>
 
                   {/* Right: Stats + Actions */}
                   <div className="w-full md:w-auto space-y-4">
                     {/* Stats */}
-                    <div className="grid grid-cols-3 gap-px bg-gray-200 rounded-2xl overflow-hidden shadow-lg">
-                      <div className="bg-white px-6 py-4 text-center">
-                        <div className="text-3xl font-black bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
+                    <div className="grid grid-cols-2 gap-px bg-gray-200 rounded-2xl overflow-hidden shadow-lg">
+                      <div className="bg-white px-4 py-3 text-center">
+                        <div className="text-2xl font-black bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
                           {user.stats.posts}
                         </div>
-                        <div className="text-sm text-gray-600 font-medium">Bài viết</div>
+                        <div className="text-xs text-gray-600 font-medium">Bài viết</div>
                       </div>
-                      <div className="bg-white px-6 py-4 text-center">
-                        <div className="text-3xl font-black bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                      <div className="bg-white px-4 py-3 text-center">
+                        <div className="text-2xl font-black bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">
+                          {user.stats.reviews}
+                        </div>
+                        <div className="text-xs text-gray-600 font-medium">Đánh giá</div>
+                      </div>
+                      <div className="bg-white px-4 py-3 text-center">
+                        <div className="text-2xl font-black bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
                           {user.stats.followers}
                         </div>
-                        <div className="text-sm text-gray-600 font-medium">Followers</div>
+                        <div className="text-xs text-gray-600 font-medium">Followers</div>
                       </div>
-                      <div className="bg-white px-6 py-4 text-center">
-                        <div className="text-3xl font-black bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                      <div className="bg-white px-4 py-3 text-center">
+                        <div className="text-2xl font-black bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
                           {user.stats.following}
                         </div>
-                        <div className="text-sm text-gray-600 font-medium">Following</div>
+                        <div className="text-xs text-gray-600 font-medium">Following</div>
                       </div>
                     </div>
 
@@ -332,8 +525,8 @@ function UserProfile() {
                       </button>
                       <button className="px-4 py-3 rounded-2xl bg-gradient-to-r from-pink-500 to-purple-600 text-white hover:shadow-xl hover:scale-105 transition-all duration-200">
                         <Sparkles size={18} />
-                      </button>
-                    </div>
+                </button>
+              </div>
                   </div>
                 </div>
               </div>
@@ -347,6 +540,7 @@ function UserProfile() {
             <div className="flex space-x-2">
               {[
                 { id: 'posts', label: 'Bài viết', icon: ImageIcon },
+                { id: 'reviews', label: 'Bài đánh giá', icon: Star },
                 { id: 'favorites', label: 'Yêu thích', icon: Heart },
                 { id: 'saved', label: 'Đã lưu', icon: Bookmark }
               ].map((tab) => (
@@ -367,17 +561,32 @@ function UserProfile() {
           </div>
         </section>
 
-        {/* Posts Grid */}
-        <section className="max-w-6xl mx-auto px-4 md:px-6 mt-6 mb-10">
+        {/* Content Grid */}
+        <section id="posts-section" className="max-w-6xl mx-auto px-4 md:px-6 mt-6 mb-10">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {mockPosts.map((post) => (
+            {(postsLoading || userPostsLoading || reviewsLoading) ? (
+              <>
+                <div className="animate-pulse bg-white/80 rounded-3xl h-80" />
+                <div className="animate-pulse bg-white/80 rounded-3xl h-80" />
+              </>
+            ) : currentData.length === 0 ? (
+              <div className="col-span-2 text-center py-12">
+                <div className="text-gray-500 text-lg mb-2">
+                  {activeTab === 'reviews' ? 'Chưa có bài đánh giá nào' : 'Chưa có bài viết nào'}
+                </div>
+                <div className="text-gray-400 text-sm">
+                  {activeTab === 'reviews' ? 'Hãy đánh giá nhà hàng bạn đã thử!' : 'Hãy chia sẻ trải nghiệm ẩm thực của bạn!'}
+                </div>
+              </div>
+            ) : (
+              currentItems.map((item) => (
               <article
-                key={post.id}
+                key={item.id}
                 className="bg-white/90 backdrop-blur-sm rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-white/60"
               >
-                {/* Post Header */}
+                {/* Header */}
                 <header className="px-6 py-4 flex items-center justify-between border-b border-gray-100">
-                  <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3">
                     <div className="relative">
                       {(avatarPreview || avatarSrc) ? (
                         <img
@@ -387,66 +596,192 @@ function UserProfile() {
                         />
                       ) : (
                         <div className={`w-12 h-12 bg-gradient-to-br ${user.avatarBg} rounded-full flex items-center justify-center text-white font-semibold shadow`}>
-                          {user.name?.[0] || "U"}
+                  {user.name?.[0] || "U"}
                         </div>
                       )}
-                    </div>
-                    <div>
+                </div>
+                <div>
                       <div className="font-bold text-gray-900">{user.name}</div>
-                      <div className="text-sm text-gray-500">{post.timeAgo}</div>
-                    </div>
+                      <div className="text-sm text-gray-500">{item.timeAgo}</div>
+                </div>
+              </div>
+                  <div className="relative">
+                    <button 
+                      onClick={() => setOpenDropdownId(openDropdownId === item.id ? null : item.id)}
+                      className="w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors"
+                    >
+                      <MoreHorizontal size={20} className="text-gray-500" />
+                    </button>
+                    
+                    {/* Dropdown Menu */}
+                    {openDropdownId === item.id && (
+                      <div className="absolute right-0 top-12 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50 min-w-[160px]">
+                        <button
+                          onClick={() => handleDeleteClick(item.id, activeTab)}
+                          disabled={isDeleting}
+                          className={`w-full px-4 py-2 text-left flex items-center gap-2 transition-colors ${
+                            isDeleting
+                              ? 'text-gray-400 cursor-not-allowed'
+                              : 'text-red-600 hover:bg-red-50'
+                          }`}
+                        >
+                          <Trash2 size={16} />
+                          <span>Xóa {activeTab === 'reviews' ? 'đánh giá' : 'bài viết'}</span>
+              </button>
+                      </div>
+                    )}
                   </div>
-                  <button className="w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors">
-                    <MoreHorizontal size={20} className="text-gray-500" />
-                  </button>
-                </header>
+            </header>
 
-                {/* Post Content */}
+                {/* Content */}
                 <div className="px-6 py-4">
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">{post.title}</h3>
-                  <p className="text-gray-600 mb-4">{post.content}</p>
-                </div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="text-xl font-bold text-gray-900">{item.title}</h3>
+                    {activeTab === 'reviews' && item.rating && (
+                      <div className="flex items-center gap-1">
+                        {[...Array(5)].map((_, i) => (
+                          <Star
+                            key={i}
+                            size={16}
+                            className={`${i < item.rating ? "text-yellow-400 fill-current" : "text-gray-300"}`}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-gray-600 mb-4">{item.content}</p>
+            </div>
 
-                {/* Post Image */}
-                <div className="relative h-64 overflow-hidden">
-                  <img
-                    src={post.image}
-                    alt={post.title}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
-                </div>
+                {/* Image */}
+                {item.image && (
+                  <div className="relative h-64 overflow-hidden">
+              <img
+                      src={item.image}
+                      alt={item.title}
+                className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
+                  </div>
+                )}
 
-                {/* Post Actions */}
+                {/* Actions */}
                 <footer className="px-6 py-4 flex items-center justify-between border-t border-gray-100">
                   <div className="flex items-center space-x-6">
                     <button className="flex items-center space-x-2 text-gray-600 hover:text-pink-600 transition-colors group">
                       <Heart size={20} className="group-hover:fill-current" />
-                      <span className="font-medium">{post.likes}</span>
+                      <span className="font-medium">{item.likes}</span>
                     </button>
                     <button className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors">
                       <MessageCircle size={20} />
-                      <span className="font-medium">{post.comments}</span>
+                      <span className="font-medium">{item.comments}</span>
                     </button>
                     <button className="flex items-center space-x-2 text-gray-600 hover:text-green-600 transition-colors">
                       <Share size={20} />
-                      <span className="font-medium">{post.shares}</span>
+                      <span className="font-medium">{item.shares}</span>
                     </button>
-                  </div>
+            </div>
                   <button className="text-gray-400 hover:text-gray-600">
                     <Bookmark size={20} />
                   </button>
                 </footer>
-              </article>
-            ))}
+          </article>
+              ))
+            )}
           </div>
+          
+          {/* Pagination */}
+          {!(postsLoading || userPostsLoading || reviewsLoading) && currentData.length > 0 && totalPages > 1 && (
+            <div className="mt-8 flex flex-col items-center space-y-4">
+              {/* Page info */}
+              <div className="text-sm text-gray-600">
+                Hiển thị {startIndex + 1}-{Math.min(endIndex, currentData.length)} trong {currentData.length} {activeTab === 'reviews' ? 'bài đánh giá' : 'bài viết'}
+              </div>
+              
+              {/* Pagination buttons */}
+              <div className="flex items-center space-x-2">
+                {/* Previous button */}
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    currentPage === 1
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  Trước
+                </button>
+                
+                {/* Page numbers */}
+                <div className="flex space-x-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                    // Show first page, last page, current page, and pages around current
+                    const shouldShow = 
+                      page === 1 || 
+                      page === totalPages || 
+                      Math.abs(page - currentPage) <= 1;
+                    
+                    if (!shouldShow) {
+                      // Show ellipsis for gaps
+                      if (page === 2 && currentPage > 4) {
+                        return <span key={page} className="px-2 py-2 text-gray-400">...</span>;
+                      }
+                      if (page === totalPages - 1 && currentPage < totalPages - 3) {
+                        return <span key={page} className="px-2 py-2 text-gray-400">...</span>;
+                      }
+                      return null;
+                    }
+                    
+                    return (
+                      <button
+                        key={page}
+                        onClick={() => handlePageChange(page)}
+                        className={`px-3 py-2 rounded-lg font-medium transition-all ${
+                          page === currentPage
+                            ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-lg'
+                            : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    );
+                  })}
+                </div>
+                
+                {/* Next button */}
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    currentPage === totalPages
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  Sau
+                </button>
+              </div>
+            </div>
+          )}
         </section>
       </main>
 
       {/* Enhanced Edit Profile Modal */}
       {isEditOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+          <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative">
+            {/* Loading Overlay */}
+            {isUpdating && (
+              <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-3xl flex items-center justify-center z-10">
+                <div className="flex flex-col items-center gap-3">
+                  <Loader2 size={32} className="animate-spin text-blue-600" />
+                  <span className="text-gray-600 font-medium">Đang cập nhật hồ sơ...</span>
+                </div>
+              </div>
+            )}
             {/* Modal Header */}
             <div className="flex items-center justify-between p-8 border-b border-gray-100">
               <div>
@@ -503,7 +838,8 @@ function UserProfile() {
                     type="text"
                     value={formData.fullName}
                     onChange={(e) => setFormData({...formData, fullName: e.target.value})}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    disabled={isUpdating}
+                    className={getInputClassName("w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all")}
                     placeholder="Nhập họ tên đầy đủ"
                   />
                 </div>
@@ -600,10 +936,24 @@ function UserProfile() {
                 </button>
                 <button
                   type="submit"
-                  className="inline-flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:shadow-xl hover:scale-105 transition-all font-semibold"
+                  disabled={isUpdating}
+                  className={`inline-flex items-center gap-2 px-8 py-3 rounded-xl transition-all font-semibold ${
+                    isUpdating
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:shadow-xl hover:scale-105'
+                  }`}
                 >
-                  <Save size={20} />
-                  <span>Lưu thay đổi</span>
+                  {isUpdating ? (
+                    <>
+                      <Loader2 size={20} className="animate-spin" />
+                      <span>Đang lưu...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save size={20} />
+                      <span>Lưu thay đổi</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>
@@ -614,6 +964,77 @@ function UserProfile() {
       {showLogoutToast && (
         <div className="fixed top-4 right-4 z-50 px-4 py-2 rounded-xl shadow bg-amber-500 text-white font-medium">
           Vui lòng đăng nhập lại để tiếp tục
+        </div>
+      )}
+
+      {/* Custom Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-300"
+          onClick={!isDeleting ? handleCancelDelete : undefined}
+        >
+          <div 
+            className="bg-white rounded-3xl max-w-md w-full shadow-2xl transform transition-all duration-300 scale-100 animate-in zoom-in-95 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Loading Overlay */}
+            {isDeleting && (
+              <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-3xl flex items-center justify-center z-10">
+                <div className="flex flex-col items-center gap-3">
+                  <Loader2 size={32} className="animate-spin text-red-600" />
+                  <span className="text-gray-600 font-medium">Đang xóa...</span>
+                </div>
+              </div>
+            )}
+            {/* Modal Header */}
+            <div className="p-8 text-center">
+              {/* Warning Icon */}
+              <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-6">
+                <Trash2 size={32} className="text-red-600" />
+              </div>
+              
+              {/* Title */}
+              <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                Xác nhận xóa
+              </h3>
+              
+              {/* Message */}
+              <p className="text-gray-600 text-lg leading-relaxed">
+                Bạn có chắc chắn muốn xóa {deleteItem?.type === 'reviews' ? 'bài đánh giá' : 'bài viết'} này không?
+              </p>
+              <p className="text-gray-500 text-sm mt-2">
+                Hành động này không thể hoàn tác.
+              </p>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex gap-3 p-8 pt-0">
+              <button
+                onClick={handleCancelDelete}
+                className="flex-1 px-6 py-3 rounded-2xl border-2 border-gray-200 text-gray-700 font-semibold hover:bg-gray-50 hover:border-gray-300 transition-all duration-200"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                className={`flex-1 px-6 py-3 rounded-2xl font-semibold transition-all duration-200 ${
+                  isDeleting
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 hover:shadow-lg transform hover:scale-105'
+                }`}
+              >
+                {isDeleting ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <Loader2 size={16} className="animate-spin" />
+                    <span>Đang xóa...</span>
+                  </div>
+                ) : (
+                  'Xóa'
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

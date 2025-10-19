@@ -90,6 +90,17 @@ export default function OnboardingModal({ open, onClose, userId }) {
   // lưu key đã chọn (key = name chuẩn hoá)
   const [picked, setPicked] = useState(() => new Set());
   const [showSuccessFx, setShowSuccessFx] = useState(false);
+  const [currentCategoryIndex, setCurrentCategoryIndex] = useState(0);
+
+  // Định nghĩa thứ tự và yêu cầu cho từng category
+  const categoryOrder = [
+    { name: "Price Range", minTags: 1 },
+    { name: "Restaurant style", minTags: 2 },
+    { name: "Restaurant Decoration", minTags: 2 },
+    { name: "Country", minTags: 3 },
+    { name: "Food type", minTags: 3 },
+    { name: "Food Characteristics", minTags: 3 },
+  ];
 
   // đóng bằng ESC
   useEffect(() => {
@@ -99,26 +110,48 @@ export default function OnboardingModal({ open, onClose, userId }) {
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  const tags = useMemo(() => {
+  const tagsByCategory = useMemo(() => {
     const arr = data?.data ?? [];
-    return arr.map((t) => {
+    const grouped = {};
+    
+    arr.forEach((t) => {
+      const categoryName = t.categoryName;
+      if (!grouped[categoryName]) {
+        grouped[categoryName] = [];
+      }
+      
       const key = toKey(t.name);
-      return {
+      grouped[categoryName].push({
         id: t.id,
         rawName: t.name, // POST cần đúng tên server
         key,
         label: toLabel(t.name),
         description: t.description,
         emoji: ICONS[key] || "🍽️",
-      };
+      });
     });
+    
+    return grouped;
   }, [data]);
 
   const byKey = useMemo(() => {
     const map = new Map();
-    tags.forEach((t) => map.set(t.key, t));
+    Object.values(tagsByCategory).flat().forEach((t) => map.set(t.key, t));
     return map;
-  }, [tags]);
+  }, [tagsByCategory]);
+
+  // Lấy current category
+  const currentCategory = categoryOrder[currentCategoryIndex];
+  const currentCategoryTags = tagsByCategory[currentCategory?.name] || [];
+  
+  // Đếm số tags đã chọn trong current category
+  const currentCategoryPicked = Array.from(picked).filter(key => {
+    const tag = byKey.get(key);
+    return tag && tagsByCategory[currentCategory?.name]?.some(t => t.key === key);
+  });
+  
+  const isCurrentCategoryValid = currentCategoryPicked.length >= currentCategory?.minTags;
+  const isLastCategory = currentCategoryIndex === categoryOrder.length - 1;
 
   const toggle = (key) => {
     setPicked((prev) => {
@@ -128,7 +161,24 @@ export default function OnboardingModal({ open, onClose, userId }) {
     });
   };
 
+  const handleNext = () => {
+    if (isCurrentCategoryValid && !isLastCategory) {
+      setCurrentCategoryIndex(prev => prev + 1);
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentCategoryIndex > 0) {
+      setCurrentCategoryIndex(prev => prev - 1);
+    }
+  };
+
   const handleContinue = async () => {
+    if (!isLastCategory) {
+      handleNext();
+      return;
+    }
+
     if (!picked.size) return;
     const body = Array.from(picked).map((k) => {
       const it = byKey.get(k);
@@ -155,7 +205,7 @@ export default function OnboardingModal({ open, onClose, userId }) {
   if (!open) return null;
 
   const count = picked.size;
-  const canContinue = count > 0;
+  const canContinue = isCurrentCategoryValid;
 
   return (
     <div className="fixed inset-0 z-[1000]">
@@ -187,13 +237,34 @@ export default function OnboardingModal({ open, onClose, userId }) {
           {/* header */}
           <div className="px-6 pt-6 pb-3 border-b border-gray-100">
             <div className="w-16 h-1 rounded mx-auto bg-gray-200 mb-4" />
+            
+            {/* Progress indicator */}
+            <div className="flex justify-center mb-4">
+              <div className="flex space-x-2">
+                {categoryOrder.map((_, index) => (
+                  <div
+                    key={index}
+                    className={`w-3 h-3 rounded-full ${
+                      index <= currentCategoryIndex
+                        ? "bg-pink-500"
+                        : "bg-gray-200"
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+            
             <h2 className="text-center text-xl md:text-2xl font-bold text-gray-900">
-              Bạn có tâm trạng muốn ăn gì?
+              {currentCategory?.name}
             </h2>
             <p className="text-center text-gray-500 mt-1 mb-2 text-sm">
-              Chọn hashtag phù hợp để chúng tôi gợi ý những địa điểm tuyệt vời
-              nhất
+              Chọn tối thiểu {currentCategory?.minTags} hashtag để tiếp tục
             </p>
+            
+            {/* Current selection count */}
+            <div className="text-center text-sm text-pink-600 font-medium">
+              Đã chọn: {currentCategoryPicked.length}/{currentCategory?.minTags}
+            </div>
           </div>
 
           {/* body */}
@@ -217,7 +288,7 @@ export default function OnboardingModal({ open, onClose, userId }) {
             ) : (
               <>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 gap-3">
-                  {tags.map((t) => (
+                  {currentCategoryTags.map((t) => (
                     <Tile
                       key={t.key}
                       selected={picked.has(t.key)}
@@ -231,28 +302,44 @@ export default function OnboardingModal({ open, onClose, userId }) {
 
                 {/* footer CTA */}
                 <div className="mt-8">
-                  <button
-                    onClick={handleContinue}
-                    disabled={!canContinue || saving}
-                    className={`w-full h-12 rounded-xl font-semibold transition-all flex items-center justify-center gap-2
-                    ${
-                      canContinue
-                        ? "bg-gradient-to-r from-pink-500 to-purple-500 text-white hover:brightness-95"
-                        : "bg-gray-200 text-gray-500 cursor-not-allowed"
-                    }`}
-                  >
-                    {saving && (
-                      <LoadingSpinner
-                        inline
-                        size="5"
-                        color="white"
-                        className="border-3"
-                      />
+                  <div className="flex gap-3">
+                    {/* Previous button */}
+                    {currentCategoryIndex > 0 && (
+                      <button
+                        onClick={handlePrevious}
+                        disabled={saving}
+                        className="px-6 py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50"
+                      >
+                        Quay lại
+                      </button>
                     )}
-                    {canContinue
-                      ? `Tiếp tục với ${count} sở thích`
-                      : "Chọn ít nhất 1 hashtag để tiếp tục"}
-                  </button>
+                    
+                    {/* Next/Continue button */}
+                    <button
+                      onClick={handleContinue}
+                      disabled={!canContinue || saving}
+                      className={`flex-1 h-12 rounded-xl font-semibold transition-all flex items-center justify-center gap-2
+                      ${
+                        canContinue
+                          ? "bg-gradient-to-r from-pink-500 to-purple-500 text-white hover:brightness-95"
+                          : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                      }`}
+                    >
+                      {saving && (
+                        <LoadingSpinner
+                          inline
+                          size="5"
+                          color="white"
+                          className="border-3"
+                        />
+                      )}
+                      {isLastCategory
+                        ? "Hoàn thành"
+                        : canContinue
+                        ? "Tiếp tục"
+                        : `Chọn tối thiểu ${currentCategory?.minTags} hashtag`}
+                    </button>
+                  </div>
                 </div>
               </>
             )}

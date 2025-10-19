@@ -11,6 +11,14 @@ import {
 } from "lucide-react";
 
 const PostCard = ({ post, onLike, onSave }) => {
+  // Debug log để kiểm tra post data
+  console.log("PostCard received post:", {
+    id: post.id,
+    hasImage: !!post.image,
+    imageUrl: post.image,
+    content: post.content
+  });
+
   return (
     <article className="group bg-white/90 backdrop-blur-sm rounded-3xl shadow border border-white/60 hover:shadow-lg transition overflow-hidden">
       {/* Popular */}
@@ -108,7 +116,33 @@ const PostCard = ({ post, onLike, onSave }) => {
             alt="Post"
             className="w-full h-72 object-cover rounded-2xl shadow-sm group-hover:scale-[1.01] transition-transform"
             loading="lazy"
+            onError={(e) => {
+              console.error("❌ Image failed to load:", post.image);
+              e.target.style.display = 'none';
+            }}
+            onLoad={() => {
+              console.log("✅ Image loaded successfully:", post.image);
+            }}
           />
+        </div>
+      )}
+      
+      {/* Invalid image warning */}
+      {post.hasInvalidImage && (
+        <div className="px-6 pb-4">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center">
+                <span className="text-white text-xs">⚠</span>
+              </div>
+              <p className="text-sm font-medium text-yellow-800">
+                Ảnh không khả dụng
+              </p>
+            </div>
+            <p className="text-xs text-yellow-700">
+              Bài viết này được tạo trước khi cập nhật hệ thống. Ảnh không thể hiển thị.
+            </p>
+          </div>
         </div>
       )}
 
@@ -138,7 +172,7 @@ const PostCard = ({ post, onLike, onSave }) => {
                 }`}
             >
               <Star size={18} className={post.isLiked ? "fill-current" : ""} />
-              Đánh giá
+              Thích
             </button>
 
             <button className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-sm font-semibold text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">
