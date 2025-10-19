@@ -175,7 +175,7 @@ const LoginPage = () => {
       // Get current origin for debugging
       const currentOrigin = window.location.origin;
       const currentUrl = window.location.href;
-      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "691877893987-6reciq92hak2439m1mchfona8gt1f6cn.apps.googleusercontent.com";
+      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "1042609021742-tflr2gbgb5c60aktv5r42pf23isocgg8.apps.googleusercontent.com";
       
       console.log("🔍 Google Login Debug Info:");
       console.log("Current origin:", currentOrigin);
@@ -186,7 +186,7 @@ const LoginPage = () => {
 
       // Configure Google OAuth
       window.google.accounts.id.initialize({
-        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || "691877893987-6reciq92hak2439m1mchfona8gt1f6cn.apps.googleusercontent.com",
+        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || "1042609021742-tflr2gbgb5c60aktv5r42pf23isocgg8.apps.googleusercontent.com",
         callback: handleGoogleCallback,
         auto_select: false,
         cancel_on_tap_outside: true,
@@ -243,6 +243,9 @@ const LoginPage = () => {
   const handleGoogleCallback = async (response) => {
     try {
       const { credential } = response;
+      console.log("🔑 Google ID Token received:", credential);
+      console.log("🔍 Token length:", credential?.length);
+      console.log("🔍 Token preview:", credential?.substring(0, 50) + "...");
       
       if (!credential) {
         toast.error("Không thể lấy thông tin từ Google.");

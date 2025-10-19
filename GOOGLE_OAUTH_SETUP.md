@@ -23,9 +23,14 @@ http://localhost:3000
 
 ### Environment Variables cần thêm:
 ```
-VITE_GOOGLE_CLIENT_ID=691877893987-6reciq92hak2439m1mchfona8gt1f6cn.apps.googleusercontent.com
+VITE_GOOGLE_CLIENT_ID=1042609021742-tflr2gbgb5c60aktv5r42pf23isocgg8.apps.googleusercontent.com
 VITE_API_BASE_URL=https://angiday-production-c5c0.up.railway.app
 ```
+
+### ⚠️ Lưu ý quan trọng:
+- **Client ID phải khớp** giữa frontend và backend
+- **Backend expect**: `1042609021742-tflr2gbgb5c60aktv5r42pf23isocgg8.apps.googleusercontent.com`
+- **Không dùng**: `691877893987-6reciq92hak2439m1mchfona8gt1f6cn.apps.googleusercontent.com`
 
 ## 🚨 Troubleshooting
 
