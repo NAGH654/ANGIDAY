@@ -22,8 +22,18 @@ export const authApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Auth"],
     }),
+
+    loginWithGoogle: build.mutation({
+      // body: { idToken }
+      query: (body) => ({
+        url: "/User/login-by-google-id-token",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Auth"],
+    }),
   }),
   overrideExisting: false,
 });
 
-export const { useRegisterMutation, useLoginWithUsernameMutation } = authApi;
+export const { useRegisterMutation, useLoginWithUsernameMutation, useLoginWithGoogleMutation } = authApi;

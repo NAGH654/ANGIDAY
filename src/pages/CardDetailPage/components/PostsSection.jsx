@@ -1,5 +1,6 @@
 import React from "react";
 import { MapPin, MoreHorizontal, Heart, MessageCircle, Share } from "lucide-react";
+import { BASE_URL } from "@redux/api/baseApi";
 
 const PostsSection = ({ restaurant, posts }) => {
   return (
@@ -10,7 +11,7 @@ const PostsSection = ({ restaurant, posts }) => {
         {posts.map((post) => (
           <div key={post.id} className="border-b border-gray-100 pb-6 last:border-0">
             <div className="flex items-start space-x-3 mb-4">
-              <img src={restaurant.thumbnail} alt={restaurant.name} className="w-12 h-12 rounded-full" />
+              <img src={restaurant.image} alt={restaurant.name} className="w-12 h-12 rounded-full object-cover" />
               <div className="flex-1">
                 <div className="flex items-center space-x-2">
                   <span className="font-semibold text-gray-900">{restaurant.name}</span>
@@ -33,6 +34,16 @@ const PostsSection = ({ restaurant, posts }) => {
 
             <h3 className="font-bold text-gray-900 mb-2">{post.title}</h3>
             <p className="text-gray-700 mb-4 whitespace-pre-line">{post.content}</p>
+
+            {post.imageUrl && (
+              <div className="mb-4">
+                <img 
+                  src={post.imageUrl.startsWith('http') ? post.imageUrl : `${BASE_URL}/Storage/view?key=${post.imageUrl}`}
+                  alt="Post content"
+                  className="w-full max-w-md h-48 object-cover rounded-lg"
+                />
+              </div>
+            )}
 
             <div className="flex items-center space-x-6 text-sm text-gray-500">
               <button className="flex items-center space-x-2 hover:text-pink-600">

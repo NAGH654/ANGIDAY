@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ImageIcon,
-  MapPin,
   Users,
   Clock,
   Heart,
@@ -11,54 +10,66 @@ import {
   Camera,
   Star,
   ChefHat,
-  Utensils,
   X,
 } from "lucide-react";
 import CustomerSideBar from "@layout/SideBar";
-
-const FOOD_TAGS = [
-  "Món Việt",
-  "Món Nhật",
-  "Món Hàn",
-  "Món Thái",
-  "BBQ",
-  "Lẩu",
-  "Đồ uống",
-  "Tráng miệng",
-  "Healthy",
-  "Vegetarian",
-  "Street Food",
-  "Fine Dining",
-];
+import { useCreateCommunityPostMutation, useGetMeQuery } from "@redux/api/User/userApi";
+import { usePresignUploadMutation, useUploadMutation } from "@redux/api/Storage/storageApi";
+import { toast } from "react-hot-toast";
+import { BASE_URL } from "@redux/api/baseApi";
 
 const MAX_CONTENT = 500;
 const MAX_FILE_MB = 10;
 
 function PostPage() {
   const [postContent, setPostContent] = useState("");
-  const [location, setLocation] = useState("");
-  const [imageURL, setImageURL] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [privacy, setPrivacy] = useState("public");
-  const [selectedTags, setSelectedTags] = useState([]);
   const [error, setError] = useState("");
   const fileInputRef = useRef(null);
+  
+  const [createCommunityPost, { isLoading: isSubmitting }] = useCreateCommunityPostMutation();
+  const [presignUpload] = usePresignUploadMutation();
+  const [uploadFile] = useUploadMutation();
+  
+  // Lấy thông tin user đã đăng nhập
+  const { data: userData, isLoading: userLoading } = useGetMeQuery();
 
   // revoke object url khi thay ảnh/thoát
   useEffect(() => {
     return () => {
-      if (imageURL) URL.revokeObjectURL(imageURL);
+      if (imagePreview) URL.revokeObjectURL(imagePreview);
     };
-  }, [imageURL]);
+  }, [imagePreview]);
 
   const charCount = postContent.length;
   const remaining = Math.max(0, MAX_CONTENT - charCount);
   const canSubmit =
-    (postContent.trim().length >= 10 || imageURL) && !isUploading && !error;
+    (postContent.trim().length >= 10 || (imageFile && imageFile.serverKey)) && !isUploading && !error && !isSubmitting;
 
   const previewTime = useMemo(() => "Vừa xong", []);
 
-  const handleImageUpload = (e) => {
+  // Helper functions để lấy thông tin user
+  const getUserName = () => {
+    if (userLoading || !userData) return "Alex";
+    return userData.userName || userData.fullName || "User";
+  };
+
+  const getUserAvatar = () => {
+    if (userLoading || !userData?.avatarUrl) {
+      return "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face";
+    }
+    return `${BASE_URL}/Storage/view?key=${userData.avatarUrl}`;
+  };
+
+  const getUserInitial = () => {
+    const name = getUserName();
+    return name.charAt(0).toUpperCase();
+  };
+
+  const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -73,42 +84,121 @@ function PostPage() {
     }
 
     setIsUploading(true);
-    // giả lập delay upload
-    setTimeout(() => {
-      const url = URL.createObjectURL(file);
-      if (imageURL) URL.revokeObjectURL(imageURL);
-      setImageURL(url);
+    try {
+      // Tạo preview ngay lập tức
+      const previewUrl = URL.createObjectURL(file);
+      if (imagePreview) URL.revokeObjectURL(imagePreview);
+      setImagePreview(previewUrl);
+      setImageFile(file);
+
+      // Upload file lên server
+      try {
+        // Thử upload trực tiếp trước
+        console.log("🚀 Attempting direct upload for file:", file.name, file.size, file.type);
+        const uploadResult = await uploadFile({ file }).unwrap();
+        console.log("✅ Direct upload result:", uploadResult);
+        
+        if (uploadResult?.key) {
+          setImageFile({ ...file, serverKey: uploadResult.key });
+          console.log("🎉 Server key set:", uploadResult.key);
+          toast.success("Ảnh đã được tải lên thành công!");
+        } else {
+          console.error("❌ No server key in upload result:", uploadResult);
+          throw new Error("No server key returned");
+        }
+      } catch (uploadError) {
+        console.error("❌ Direct upload failed:", uploadError);
+        console.log("🔄 Trying presigned upload...");
+        
+        // Fallback: sử dụng presigned upload
+        console.log("📋 Getting presigned URL...");
+        const presignResult = await presignUpload({
+          fileName: file.name,
+          contentType: file.type,
+          prefix: "posts/"
+        }).unwrap();
+        
+        console.log("📋 Presigned result:", presignResult);
+        
+        if (presignResult?.url) {
+          console.log("📤 Uploading to presigned URL:", presignResult.url);
+          // Upload lên presigned URL
+          const presignedResponse = await fetch(presignResult.url, {
+            method: 'PUT',
+            body: file,
+            headers: {
+              'Content-Type': file.type,
+            },
+          });
+          
+          console.log("📤 Presigned response:", presignedResponse.status, presignedResponse.ok);
+          
+          if (presignedResponse.ok) {
+            setImageFile({ ...file, serverKey: presignResult.key });
+            console.log("🎉 Presigned server key set:", presignResult.key);
+            toast.success("Ảnh đã được tải lên thành công!");
+          } else {
+            console.error("❌ Presigned upload failed:", presignedResponse.status);
+            throw new Error("Presigned upload failed");
+          }
+        } else {
+          console.error("❌ No presigned URL returned:", presignResult);
+          throw new Error("No presigned URL");
+        }
+      }
+    } catch (err) {
+      console.error("Upload error:", err);
+      setError("Có lỗi xảy ra khi tải ảnh lên. Bạn có thể đăng bài không có ảnh hoặc thử lại!");
+      // Không xóa ảnh ngay, để user có thể thử lại hoặc đăng không ảnh
+      // setImageFile(null);
+      // setImagePreview(null);
+    } finally {
       setIsUploading(false);
-    }, 800);
+    }
   };
 
   const removeImage = () => {
-    if (imageURL) URL.revokeObjectURL(imageURL);
-    setImageURL(null);
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setImagePreview(null);
+    setImageFile(null);
   };
 
-  const toggleTag = (tag) => {
-    setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-    );
-  };
-
-  const onSubmit = () => {
+  const onSubmit = async () => {
     if (!canSubmit) return;
-    // Submit payload mẫu
+    
+    try {
+      // Debug log để kiểm tra imageFile
+      console.log("Submitting post with imageFile:", {
+        imageFile,
+        serverKey: imageFile?.serverKey,
+        hasServerKey: !!imageFile?.serverKey
+      });
+      
     const payload = {
       content: postContent.trim(),
-      location: location.trim(),
-      privacy,
-      tags: selectedTags,
-      hasImage: Boolean(imageURL),
-    };
-    // TODO: call API
-    console.log("SUBMIT_POST", payload);
-    // reset nhẹ nhàng (giữ lại tags/permission để post nhanh nhiều lần)
+        imageUrl: imageFile?.serverKey || null,
+      };
+      
+      // Chỉ gửi nếu có serverKey thực tế
+      if (imageFile && !imageFile.serverKey) {
+        console.warn("⚠️ No serverKey found, removing image from payload");
+        payload.imageUrl = null;
+      }
+      
+      console.log("Payload being sent:", payload);
+      
+      await createCommunityPost(payload).unwrap();
+      
+      toast.success("Đăng bài thành công!");
+      
+      // Reset form
     setPostContent("");
-    setLocation("");
     removeImage();
+      setError("");
+    } catch (err) {
+      console.error("Create post error:", err);
+      toast.error("Có lỗi xảy ra khi đăng bài. Vui lòng thử lại!");
+    }
   };
 
   return (
@@ -144,8 +234,10 @@ function PostPage() {
                     : "bg-gray-200 text-gray-500 cursor-not-allowed"
                 }`}
               >
-                <span className="relative z-10">Đăng bài</span>
-                {canSubmit && (
+                <span className="relative z-10">
+                  {isSubmitting ? "Đang đăng..." : "Đăng bài"}
+                </span>
+                {canSubmit && !isSubmitting && (
                   <span className="absolute inset-0 rounded-xl bg-gradient-to-r from-pink-600 to-pink-700 opacity-0 group-hover:opacity-100 transition-opacity" />
                 )}
               </button>
@@ -168,16 +260,24 @@ function PostPage() {
               <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/60 p-6">
                 <div className="flex items-center gap-4">
                   <div className="relative">
+                    {userData?.avatarUrl ? (
+                      <img
+                        src={getUserAvatar()}
+                        alt={getUserName()}
+                        className="w-12 h-12 rounded-full object-cover shadow"
+                      />
+                    ) : (
                     <div className="w-12 h-12 bg-gradient-to-br from-pink-400 to-pink-600 rounded-full flex items-center justify-center shadow">
-                      <span className="text-white font-bold">A</span>
+                        <span className="text-white font-bold">{getUserInitial()}</span>
                     </div>
+                    )}
                     <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
                       <div className="w-1.5 h-1.5 bg-white rounded-full" />
                     </div>
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-gray-800">Alex</h3>
+                      <h3 className="font-bold text-gray-800">{getUserName()}</h3>
                       <Star className="w-4 h-4 text-yellow-400 fill-current" />
                       <span className="text-sm text-gray-600 truncate">
                         Food Enthusiast
@@ -228,7 +328,7 @@ function PostPage() {
                   </span>
                 </div>
 
-                {!imageURL ? (
+                {!imagePreview ? (
                   <div
                     className="relative border-2 border-dashed border-gray-300 rounded-xl p-10 text-center cursor-pointer bg-gradient-to-br from-gray-50 to-gray-100 hover:border-pink-400 hover:brightness-95 transition-all"
                     onClick={() => fileInputRef.current?.click()}
@@ -271,7 +371,7 @@ function PostPage() {
                   <div className="relative group">
                     <div className="rounded-xl overflow-hidden shadow">
                       <img
-                        src={imageURL}
+                        src={imagePreview}
                         alt="Preview"
                         className="w-full h-80 object-cover group-hover:scale-[1.02] transition-transform duration-300"
                       />
@@ -283,60 +383,37 @@ function PostPage() {
                         <X size={18} />
                       </button>
                     </div>
+                    
+                    {/* Retry upload button nếu không có serverKey */}
+                    {imageFile && !imageFile.serverKey && (
+                      <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <p className="text-sm text-yellow-700 mb-2">
+                          Ảnh chưa được tải lên server. Bạn có thể:
+                        </p>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => fileInputRef.current?.click()}
+                            className="px-3 py-1.5 bg-yellow-500 text-white text-sm rounded-lg hover:bg-yellow-600 transition"
+                          >
+                            Thử lại
+                          </button>
+                          <button
+                            onClick={removeImage}
+                            className="px-3 py-1.5 bg-gray-500 text-white text-sm rounded-lg hover:bg-gray-600 transition"
+                          >
+                            Xóa ảnh
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
 
-              {/* Địa điểm */}
-              <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/60 p-6">
-                <label className="block text-sm font-semibold text-gray-800 mb-2">
-                  Địa điểm
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    placeholder="Thêm vị trí nhà hàng, quán ăn..."
-                    className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-pink-300/30 focus:border-pink-400 placeholder-gray-500 text-gray-700 transition"
-                  />
-                  <MapPin className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-pink-400" />
-                </div>
-              </div>
 
-              {/* Thẻ món ăn */}
+              {/* Privacy settings */}
               <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/60 p-6">
-                <div className="flex items-center justify-between mb-3">
-                  <label className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                    <Utensils className="w-4 h-4 text-pink-500" />
-                    Thể loại món ăn
-                  </label>
-                  <span className="text-xs text-gray-500">
-                    Đã chọn: <b>{selectedTags.length}</b>
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-2.5">
-                  {FOOD_TAGS.map((tag) => {
-                    const active = selectedTags.includes(tag);
-                    return (
-                      <button
-                        type="button"
-                        key={tag}
-                        onClick={() => toggleTag(tag)}
-                        className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all
-                          ${
-                            active
-                              ? "bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow"
-                              : "bg-white text-gray-700 border border-gray-300 hover:border-pink-300 hover:text-pink-600"
-                          }`}
-                        aria-pressed={active}
-                      >
-                        {tag}
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mt-6">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-medium text-gray-700">
                       Quyền riêng tư:
@@ -379,11 +456,19 @@ function PostPage() {
                   {/* Header */}
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
+                      {userData?.avatarUrl ? (
+                        <img
+                          src={getUserAvatar()}
+                          alt={getUserName()}
+                          className="w-10 h-10 rounded-full object-cover"
+                        />
+                      ) : (
                       <div className="w-10 h-10 bg-gradient-to-br from-pink-400 via-rose-400 to-purple-500 rounded-full flex items-center justify-center">
-                        <span className="text-white font-semibold">A</span>
+                          <span className="text-white font-semibold">{getUserInitial()}</span>
                       </div>
+                      )}
                       <div>
-                        <p className="font-semibold text-gray-900">Alex</p>
+                        <p className="font-semibold text-gray-900">{getUserName()}</p>
                         <p className="text-sm text-gray-500">{previewTime}</p>
                       </div>
                     </div>
@@ -403,35 +488,11 @@ function PostPage() {
                     )}
                   </div>
 
-                  {/* Tags */}
-                  {selectedTags.length > 0 && (
-                    <div className="mb-4">
-                      <div className="flex flex-wrap gap-2">
-                        {selectedTags.map((tag) => (
-                          <span
-                            key={tag}
-                            className="text-xs bg-gradient-to-r from-pink-100 to-purple-100 text-pink-700 px-2 py-1 rounded-full"
-                          >
-                            #{tag}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Location */}
-                  {location && (
-                    <div className="flex items-center gap-2 text-gray-500 text-sm mb-4">
-                      <MapPin size={14} />
-                      <span>{location}</span>
-                    </div>
-                  )}
-
                   {/* Image */}
-                  {imageURL && (
+                  {imagePreview && (
                     <div className="mb-4">
                       <img
-                        src={imageURL}
+                        src={imagePreview}
                         alt="Preview"
                         className="rounded-lg w-full h-48 object-cover"
                       />
@@ -477,7 +538,7 @@ function PostPage() {
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="w-2 h-2 bg-purple-500 rounded-full mt-2" />
-                    Thêm địa điểm để giúp người khác tìm kiếm
+                    Chia sẻ trải nghiệm thực tế và chân thành
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="w-2 h-2 bg-indigo-500 rounded-full mt-2" />
@@ -489,8 +550,8 @@ function PostPage() {
           </div>
         </div>
 
-        {/* nhỏ gọn: hiệu ứng intro cho phần tiêu đề nếu bạn cần */}
-        <style jsx>{`
+        {/* CSS animations */}
+        <style>{`
           @keyframes fade-in {
             from {
               opacity: 0;
