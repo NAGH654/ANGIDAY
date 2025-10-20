@@ -28,7 +28,9 @@ const baseQueryWithAuth = async (args, api, extraOptions) => {
       api.dispatch(logout());
       try {
         localStorage.setItem("auth:logout", String(Date.now()));
-      } catch {}
+      } catch {
+        // ignore
+      }
     }
   }
   return res;
@@ -37,6 +39,6 @@ const baseQueryWithAuth = async (args, api, extraOptions) => {
 export const baseApi = createApi({
   reducerPath: "api",
   baseQuery: baseQueryWithAuth,
-  tagTypes: ["Auth", "Tag", "RestaurantBookmark"],
+  tagTypes: ["Auth", "Tag", "RestaurantBookmark", "Chat", "ChatMessages"],
   endpoints: () => ({}),
 });
