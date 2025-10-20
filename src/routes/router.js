@@ -5,6 +5,7 @@ export const endPoint = {
   POST_BOOKMARK: "/bookmarks/posts",
   POST: "/post",
   PACKAGE: "/package",
+  CHAT: "/chat",
   AUTH: "/auth",
   LOGIN: "/auth?view=login",
   REGISTER: "/auth?view=register",
