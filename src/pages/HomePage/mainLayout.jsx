@@ -5,7 +5,6 @@ import CategoryTabs from "./CategoryTabs";
 import RestaurantCard from "./RestaurantCard";
 import useDebouncedValue from "@hooks/useDebouncedValue";
 import OnboardingGate from "@components/onBoardingGate";
-import { useGetMyTagsQuery } from "@redux/api/Tag/tagApi";
 import { useSelector } from "react-redux";
 import { BASE_URL } from "@redux/api/baseApi";
 import {
@@ -13,10 +12,9 @@ import {
   useBookmarkRestaurantMutation,
   useUnbookmarkRestaurantMutation,
 } from "@redux/api/User/userApi";
-import { useGetRestaurantsByTagsQuery, useGetAllRestaurantsQuery } from "@redux/api/Restaurant/restaurantApi";
+import { useGetRestaurantsByUserTagsQuery, useGetAllRestaurantsQuery } from "@redux/api/Restaurant/restaurantApi";
 
 const categories = [
-  { name: "Gợi ý cho bạn", icon: "✨" },
   { name: "Theo thẻ của bạn", icon: "🏷️" },
   { name: "Tất cả", icon: "🌐" },
 ];
@@ -27,7 +25,7 @@ const FoodHomepage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearch = useDebouncedValue(searchQuery, 250);
 
-  const [activeCategory, setActiveCategory] = useState("Gợi ý cho bạn");
+  const [activeCategory, setActiveCategory] = useState("Theo thẻ của bạn");
 
   const accessToken = useSelector((s) => s?.auth?.accessToken);
 
@@ -40,33 +38,35 @@ const FoodHomepage = () => {
   const [bookmarkRestaurant] = useBookmarkRestaurantMutation();
   const [unbookmarkRestaurant] = useUnbookmarkRestaurantMutation();
 
-  // Load user tags (skip when not logged in)
-  const { data: myTagsData } = useGetMyTagsQuery(undefined, { skip: !accessToken });
-  const userTagNames = useMemo(() => {
-    const raw = Array.isArray(myTagsData?.data) ? myTagsData.data : [];
-    return raw.map((t) => t.tagName).filter(Boolean);
-  }, [myTagsData]);
-
-  // Restaurants by tag (login) or all (guest)
-  const tagsQuery = useGetRestaurantsByTagsQuery(userTagNames, {
-    skip: !accessToken || userTagNames.length === 0,
-  });
+  // Restaurants by user tags (login) or all (guest)
+  const userTagsQuery = useGetRestaurantsByUserTagsQuery(undefined, { skip: !accessToken });
   const allQuery = useGetAllRestaurantsQuery(undefined, { skip: !!accessToken });
-  const isLoading = (accessToken ? tagsQuery.isLoading : allQuery.isLoading) || false;
-  const restaurants = accessToken ? tagsQuery.data || [] : allQuery.data || [];
+  
+  // Determine which data to use based on category and login status
+  const isLoading = (() => {
+    if (!accessToken) return allQuery.isLoading;
+    if (activeCategory === "Theo thẻ của bạn") return userTagsQuery.isLoading;
+    return allQuery.isLoading;
+  })();
+  
+  const restaurants = (() => {
+    if (!accessToken) return allQuery.data || [];
+    if (activeCategory === "Theo thẻ của bạn") return userTagsQuery.data || [];
+    return allQuery.data || [];
+  })();
 
   // map fields + small images
   const mappedRestaurants = useMemo(() => {
     return (restaurants || []).map((r) => ({
       id: r.id,
       name: r.name,
-      image: r.avatarUrl
-        ? `${String(BASE_URL).replace(/\/$/, "")}/${String(r.avatarUrl).replace(/^\/+/, "")}${ImageParams}`
+      image: r.imageUrl
+        ? `${BASE_URL}/Storage/view?key=${r.imageUrl}${ImageParams}`
         : `https://images.unsplash.com/photo-1552566626-52f8b828add9${ImageParams}`,
-      rating: r.averagePoint ?? 5,
-      reviews: r.totalReviews ?? 0,
+      rating: r.avgRating ?? 5,
+      reviews: r.ratingCount ?? 0,
       address: r.address ?? "",
-      isOnline: true,
+      isOnline: r.status === "active",
     }));
   }, [restaurants]);
 
@@ -107,7 +107,9 @@ const FoodHomepage = () => {
       <main className="flex-1 lg:ml-20">
         <CategoryTabs categories={categories} activeCategory={activeCategory} onChange={setActiveCategory} />
         <div className="max-w-7xl mx-auto px-6 py-6">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Khám phá địa điểm ăn uống</h2>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">
+            {activeCategory === "Theo thẻ của bạn" ? "Gợi ý cho bạn" : "Khám phá địa điểm ăn uống"}
+          </h2>
           <p className="text-gray-600 mb-8">{filteredRestaurants.length} kết quả được tìm thấy</p>
 
         {isLoading && (

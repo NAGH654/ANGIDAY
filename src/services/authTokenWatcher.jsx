@@ -9,8 +9,16 @@ function getTokenFromStorage() {
     const raw = localStorage.getItem("auth") || sessionStorage.getItem("auth");
     if (!raw) return null;
     const obj = JSON.parse(raw);
-    return obj?.accessToken || null;
-  } catch {
+    const token = obj?.accessToken || null;
+    console.log("🔍 getTokenFromStorage:", {
+      hasRaw: !!raw,
+      hasToken: !!token,
+      tokenPreview: token?.substring(0, 20) + "...",
+      source: localStorage.getItem("auth") ? "localStorage" : "sessionStorage"
+    });
+    return token;
+  } catch (error) {
+    console.error("❌ getTokenFromStorage error:", error);
     return null;
   }
 }
@@ -52,7 +60,13 @@ export default function AuthTokenWatcher({
       // 1) Token biến mất → yêu cầu 2 nhịp để chắc chắn (tránh race)
       if (accessToken && !persisted) {
         missRef.current += 1;
+        console.log(`🚨 AuthTokenWatcher: Token missing from storage (${missRef.current}/2)`, {
+          accessToken: accessToken?.substring(0, 20) + "...",
+          persisted,
+          missCount: missRef.current
+        });
         if (missRef.current >= 2) {
+          console.log("🚨 AuthTokenWatcher: Logging out due to missing token");
           cleanLogout(dispatch, { redirect });
           return;
         }

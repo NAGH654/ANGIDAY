@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { User, Lock, Eye, EyeOff } from "lucide-react";
+import { User, Lock, Eye, EyeOff, Building2 } from "lucide-react";
 import { FaFacebook } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
 import { Link, useNavigate } from "react-router-dom";
@@ -8,6 +8,7 @@ import { toast } from "react-toastify";
 
 import { endPoint } from "@routes/router";
 import { useLoginWithUsernameMutation, useLoginWithGoogleMutation } from "@redux/api/Auth/authApi";
+import { useLazyGetMeQuery } from "@redux/api/User/userApi";
 import { setCredentials } from "@redux/features/authSlice";
 import LoadingSpinner from "@components/LoadingSpinner";
 
@@ -117,6 +118,7 @@ const LoginPage = () => {
   const dispatch = useDispatch();
   const [login, { isLoading }] = useLoginWithUsernameMutation();
   const [loginWithGoogle, { isLoading: isGoogleLoading }] = useLoginWithGoogleMutation();
+  const [triggerGetMe] = useLazyGetMeQuery();
 
   const [form, setForm] = useState({
     username: "",
@@ -149,7 +151,24 @@ const LoginPage = () => {
         };
         dispatch(setCredentials(safePayload));
         toast.success("Đăng nhập thành công!");
-        navigate("/", { replace: true });
+        
+        // Debug: Log credentials
+        console.log("🔑 Login successful, credentials:", safePayload);
+        console.log("🔍 User role:", raw?.roleName || raw?.role);
+        
+        // Fetch role using /User/me then redirect
+        try {
+          const me = await triggerGetMe().unwrap();
+          const role = me?.roleName || me?.role;
+          if (role === "restaurant owner") {
+            navigate("/restaurant/profile", { replace: true });
+          } else {
+            navigate("/", { replace: true });
+          }
+        } catch (e) {
+          // Fallback: go home if cannot read profile
+          navigate("/", { replace: true });
+        }
       } else {
         toast.error(res?.message || "Đăng nhập thất bại");
       }
@@ -269,7 +288,23 @@ const LoginPage = () => {
         };
         dispatch(setCredentials(safePayload));
         toast.success("Đăng nhập Google thành công!");
-        navigate("/", { replace: true });
+        
+        // Debug: Log credentials
+        console.log("🔑 Google login successful, credentials:", safePayload);
+        console.log("🔍 User role:", raw?.roleName || raw?.role);
+        
+        // Fetch role using /User/me then redirect
+        try {
+          const me = await triggerGetMe().unwrap();
+          const role = me?.roleName || me?.role;
+          if (role === "restaurant owner") {
+            navigate("/restaurant/profile", { replace: true });
+          } else {
+            navigate("/", { replace: true });
+          }
+        } catch (e) {
+          navigate("/", { replace: true });
+        }
       } else {
         toast.error(res?.message || "Đăng nhập Google thất bại");
       }
@@ -377,6 +412,18 @@ const LoginPage = () => {
       
       {/* Hidden div for Google fallback button */}
       <div id="google-signin-button" className="hidden"></div>
+
+      {/* Restaurant Register Button */}
+      <div className="mt-8 text-center">
+        <p className="text-gray-600 mb-4">Bạn là chủ nhà hàng?</p>
+        <Link
+          to={endPoint.RESTAURANT_REGISTER}
+          className="inline-flex items-center justify-center w-full px-6 py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-xl font-medium hover:from-orange-600 hover:to-red-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-all duration-200"
+        >
+          <Building2 className="w-5 h-5 mr-2" />
+          Đăng ký nhà hàng
+        </Link>
+      </div>
     </>
   );
 };

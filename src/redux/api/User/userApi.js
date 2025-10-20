@@ -159,6 +159,7 @@ export const userApi = baseApi.injectEndpoints({
 
 export const {
   useGetMeQuery,
+  useLazyGetMeQuery,
   useGetMyCommunityPostsQuery,
   useGetUserCommunityPostsQuery,
   useGetMyReviewsQuery,
