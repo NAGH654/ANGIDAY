@@ -32,8 +32,18 @@ export const authApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Auth"],
     }),
+
+    registerRestaurant: build.mutation({
+      // body: { username, email, password, restaurantName, address, description }
+      query: (body) => ({
+        url: "/User/register-restaurant",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Auth"],
+    }),
   }),
   overrideExisting: false,
 });
 
-export const { useRegisterMutation, useLoginWithUsernameMutation, useLoginWithGoogleMutation } = authApi;
+export const { useRegisterMutation, useLoginWithUsernameMutation, useLoginWithGoogleMutation, useRegisterRestaurantMutation } = authApi;
