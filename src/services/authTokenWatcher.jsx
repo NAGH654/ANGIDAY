@@ -10,12 +10,6 @@ function getTokenFromStorage() {
     if (!raw) return null;
     const obj = JSON.parse(raw);
     const token = obj?.accessToken || null;
-    console.log("🔍 getTokenFromStorage:", {
-      hasRaw: !!raw,
-      hasToken: !!token,
-      tokenPreview: token?.substring(0, 20) + "...",
-      source: localStorage.getItem("auth") ? "localStorage" : "sessionStorage"
-    });
     return token;
   } catch (error) {
     console.error("❌ getTokenFromStorage error:", error);

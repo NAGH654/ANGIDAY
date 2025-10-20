@@ -57,17 +57,48 @@ const FoodHomepage = () => {
 
   // map fields + small images
   const mappedRestaurants = useMemo(() => {
-    return (restaurants || []).map((r) => ({
-      id: r.id,
-      name: r.name,
-      image: r.imageUrl
-        ? `${BASE_URL}/Storage/view?key=${r.imageUrl}${ImageParams}`
-        : `https://images.unsplash.com/photo-1552566626-52f8b828add9${ImageParams}`,
-      rating: r.avgRating ?? 5,
-      reviews: r.ratingCount ?? 0,
-      address: r.address ?? "",
-      isOnline: r.status === "active",
-    }));
+    const storageBase = import.meta.env.DEV
+      ? "https://angiday-production-c5c0.up.railway.app/api"
+      : BASE_URL;
+    
+    // Array of beautiful restaurant/food images from Unsplash
+    const placeholderImages = [
+      'https://images.unsplash.com/photo-1552566626-52f8b828add9?w=640&h=400&fit=crop&auto=format', // Vietnamese food
+      'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=640&h=400&fit=crop&auto=format', // Restaurant interior
+      'https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=640&h=400&fit=crop&auto=format', // Asian cuisine
+      'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=640&h=400&fit=crop&auto=format', // Street food
+      'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=640&h=400&fit=crop&auto=format', // Vietnamese pho
+      'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=640&h=400&fit=crop&auto=format', // Noodles
+      'https://images.unsplash.com/photo-1574484284002-952d92456975?w=640&h=400&fit=crop&auto=format', // Restaurant ambiance
+      'https://images.unsplash.com/photo-1551218808-94e220e084d2?w=640&h=400&fit=crop&auto=format', // Food presentation
+      'https://images.unsplash.com/photo-1565299507177-b0ac66763828?w=640&h=400&fit=crop&auto=format', // Asian dishes
+      'https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=640&h=400&fit=crop&auto=format', // Vietnamese cuisine
+      'https://images.unsplash.com/photo-1552566626-52f8b828add9?w=640&h=400&fit=crop&auto=format', // Traditional food
+      'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=640&h=400&fit=crop&auto=format', // Modern restaurant
+      'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=640&h=400&fit=crop&auto=format', // Street food stall
+      'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=640&h=400&fit=crop&auto=format', // Pho bowl
+      'https://images.unsplash.com/photo-1574484284002-952d92456975?w=640&h=400&fit=crop&auto=format', // Cozy dining
+      'https://images.unsplash.com/photo-1551218808-94e220e084d2?w=640&h=400&fit=crop&auto=format', // Food styling
+      'https://images.unsplash.com/photo-1565299507177-b0ac66763828?w=640&h=400&fit=crop&auto=format', // Asian fusion
+      'https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=640&h=400&fit=crop&auto=format', // Vietnamese specialties
+      'https://images.unsplash.com/photo-1552566626-52f8b828add9?w=640&h=400&fit=crop&auto=format', // Authentic flavors
+    ];
+    
+    return (restaurants || []).map((r, index) => {
+      // Always use Unsplash placeholder for now since Storage API is not working
+      const primary = placeholderImages[index % placeholderImages.length];
+      
+      return {
+        id: r.id,
+        name: r.name,
+        image: primary,
+        imageAlt: null, // No fallback needed since we're using Unsplash directly
+        rating: r.avgRating ?? 5,
+        reviews: r.ratingCount ?? 0,
+        address: r.address ?? "",
+        isOnline: r.status === "active",
+      };
+    });
   }, [restaurants]);
 
   // toggle bookmark
