@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { Heart, Home, Users, Settings, MessageCircle } from "lucide-react";
+import { Heart, Home, Users, Settings } from "lucide-react";
 import CustomerSideBar from "@layout/SideBar";
 import CategoryTabs from "./CategoryTabs";
 import RestaurantCard from "./RestaurantCard";
@@ -141,11 +141,6 @@ const FoodHomepage = () => {
           )}
         </div>
       </main>
-      <div className="fixed bottom-6 right-6 z-50">
-        <button className="w-14 h-14 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-full shadow-xl hover:shadow-2xl transform hover:scale-110 transition-all duration-300 flex items-center justify-center" aria-label="Mở chat">
-          <MessageCircle size={24} />
-        </button>
-      </div>
       <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-3 z-50">
         <div className="flex justify-around">
           <a href="#" className="flex flex-col items-center space-y-1 text-gray-900">

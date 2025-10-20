@@ -13,6 +13,7 @@ import RestaurantBookMarkPage from "@pages/BookMarkPage/RestaurantBookMarkPage/R
 import PostBookMarkPage from "@pages/BookMarkPage/PostBookMarkPage/PostBookMarkPage";
 import PackagePage from "@pages/PackagePage";
 import PostPage from "@pages/PostPage";
+
 import CardDetailPage from "@pages/CardDetailPage";
 import MenuPage from "@pages/CardDetailPage/MenuPage";
 import ReviewDetailPage from "@pages/CardDetailPage/ReviewDetailPage";

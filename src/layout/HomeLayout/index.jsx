@@ -1,6 +1,7 @@
 import React from "react";
 import { Outlet } from "react-router-dom";
 import SiteHeader from "@components/Header"; // chỉnh alias nếu khác
+import ChatWidget from "@components/ChatWidget";
 
 const AppLayout = () => {
   return (
@@ -12,6 +13,9 @@ const AppLayout = () => {
       <main id="main" className="flex-1">
         <Outlet />
       </main>
+
+      {/* Chat Widget - appears on all pages */}
+      <ChatWidget />
     </div>
   );
 };
