@@ -54,13 +54,7 @@ export default function AuthTokenWatcher({
       // 1) Token biến mất → yêu cầu 2 nhịp để chắc chắn (tránh race)
       if (accessToken && !persisted) {
         missRef.current += 1;
-        console.log(`🚨 AuthTokenWatcher: Token missing from storage (${missRef.current}/2)`, {
-          accessToken: accessToken?.substring(0, 20) + "...",
-          persisted,
-          missCount: missRef.current
-        });
         if (missRef.current >= 2) {
-          console.log("🚨 AuthTokenWatcher: Logging out due to missing token");
           cleanLogout(dispatch, { redirect });
           return;
         }

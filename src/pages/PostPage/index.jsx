@@ -94,34 +94,23 @@ function PostPage() {
       // Upload file lên server
       try {
         // Thử upload trực tiếp trước
-        console.log("🚀 Attempting direct upload for file:", file.name, file.size, file.type);
         const uploadResult = await uploadFile({ file }).unwrap();
-        console.log("✅ Direct upload result:", uploadResult);
         
         if (uploadResult?.key) {
           setImageFile({ ...file, serverKey: uploadResult.key });
-          console.log("🎉 Server key set:", uploadResult.key);
           toast.success("Ảnh đã được tải lên thành công!");
         } else {
-          console.error("❌ No server key in upload result:", uploadResult);
           throw new Error("No server key returned");
         }
       } catch (uploadError) {
-        console.error("❌ Direct upload failed:", uploadError);
-        console.log("🔄 Trying presigned upload...");
-        
         // Fallback: sử dụng presigned upload
-        console.log("📋 Getting presigned URL...");
         const presignResult = await presignUpload({
           fileName: file.name,
           contentType: file.type,
           prefix: "posts/"
         }).unwrap();
         
-        console.log("📋 Presigned result:", presignResult);
-        
         if (presignResult?.url) {
-          console.log("📤 Uploading to presigned URL:", presignResult.url);
           // Upload lên presigned URL
           const presignedResponse = await fetch(presignResult.url, {
             method: 'PUT',
@@ -131,18 +120,13 @@ function PostPage() {
             },
           });
           
-          console.log("📤 Presigned response:", presignedResponse.status, presignedResponse.ok);
-          
           if (presignedResponse.ok) {
             setImageFile({ ...file, serverKey: presignResult.key });
-            console.log("🎉 Presigned server key set:", presignResult.key);
             toast.success("Ảnh đã được tải lên thành công!");
           } else {
-            console.error("❌ Presigned upload failed:", presignedResponse.status);
             throw new Error("Presigned upload failed");
           }
         } else {
-          console.error("❌ No presigned URL returned:", presignResult);
           throw new Error("No presigned URL");
         }
       }
@@ -167,12 +151,6 @@ function PostPage() {
     if (!canSubmit) return;
     
     try {
-      // Debug log để kiểm tra imageFile
-      console.log("Submitting post with imageFile:", {
-        imageFile,
-        serverKey: imageFile?.serverKey,
-        hasServerKey: !!imageFile?.serverKey
-      });
       
     const payload = {
       content: postContent.trim(),
@@ -181,11 +159,8 @@ function PostPage() {
       
       // Chỉ gửi nếu có serverKey thực tế
       if (imageFile && !imageFile.serverKey) {
-        console.warn("⚠️ No serverKey found, removing image from payload");
         payload.imageUrl = null;
       }
-      
-      console.log("Payload being sent:", payload);
       
       await createCommunityPost(payload).unwrap();
       

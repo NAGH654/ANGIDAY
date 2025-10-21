@@ -9,7 +9,6 @@ export const chatApi = baseApi.injectEndpoints({
         url: `/Chat/messages?limit=${limit}`,
       }),
       transformResponse: (response) => {
-        console.log("🔍 getChatMessages API Response:", response);
         return response || [];
       },
       providesTags: ["ChatMessages"],
@@ -26,7 +25,6 @@ export const chatApi = baseApi.injectEndpoints({
         },
       }),
       transformResponse: (response) => {
-        console.log("🔍 sendChatMessage API Response:", response);
         return response || null;
       },
       invalidatesTags: ["ChatMessages"],

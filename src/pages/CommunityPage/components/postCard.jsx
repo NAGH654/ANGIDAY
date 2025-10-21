@@ -11,13 +11,6 @@ import {
 } from "lucide-react";
 
 const PostCard = ({ post, onLike, onSave }) => {
-  // Debug log để kiểm tra post data
-  console.log("PostCard received post:", {
-    id: post.id,
-    hasImage: !!post.image,
-    imageUrl: post.image,
-    content: post.content
-  });
 
   return (
     <article className="group bg-white/90 backdrop-blur-sm rounded-3xl shadow border border-white/60 hover:shadow-lg transition overflow-hidden">
@@ -121,7 +114,7 @@ const PostCard = ({ post, onLike, onSave }) => {
               e.target.style.display = 'none';
             }}
             onLoad={() => {
-              console.log("✅ Image loaded successfully:", post.image);
+              // Image loaded successfully
             }}
           />
         </div>

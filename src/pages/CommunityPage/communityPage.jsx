@@ -92,12 +92,6 @@ function CommunityPage() {
         isPopular: false,
       };
       
-      // Debug log cho avatar
-      console.log(`Post ${idx} - Avatar:`, {
-        userAvatar: p.userAvatar,
-        hasUserAvatar: !!p.userAvatar,
-        finalAvatarUrl: mappedPost.author.avatar
-      });
       
       return mappedPost;
     });
