@@ -70,19 +70,13 @@ const ReviewsSection = ({ restaurant, starDistribution, reviews }) => {
       
       // Upload image if exists
       if (imageFile) {
-        console.log("📤 Uploading image...");
-        
         try {
           // Try direct upload first
           const uploadResult = await uploadFile({ file: imageFile }).unwrap();
           imageUrl = uploadResult.key;
-          console.log("✅ Direct upload success:", uploadResult);
         } catch (uploadError) {
-          console.log("⚠️ Direct upload failed, trying presigned upload...");
-          
           // Fallback to presigned upload
           const presignResult = await presignUpload({ file: imageFile }).unwrap();
-          console.log("📋 Presigned result:", presignResult);
           
           // Upload to presigned URL
           const uploadResponse = await fetch(presignResult.url, {
@@ -95,7 +89,6 @@ const ReviewsSection = ({ restaurant, starDistribution, reviews }) => {
           
           if (uploadResponse.ok) {
             imageUrl = presignResult.key;
-            console.log("✅ Presigned upload success");
           } else {
             throw new Error("Presigned upload failed");
           }
@@ -110,10 +103,7 @@ const ReviewsSection = ({ restaurant, starDistribution, reviews }) => {
         rating: rating
       };
 
-      console.log("🚀 Submitting review:", reviewData);
-      
       const result = await createReview(reviewData).unwrap();
-      console.log("✅ Review submitted successfully:", result);
       
       toast.success("Đánh giá đã được gửi thành công!");
       
@@ -415,11 +405,10 @@ const ReviewsSection = ({ restaurant, starDistribution, reviews }) => {
                           alt="Review"
                           className="w-28 h-20 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
                           onError={(e) => {
-                            console.log("❌ Review image failed to load:", imageUrl);
                             e.target.style.display = 'none';
                           }}
                           onLoad={() => {
-                            console.log("✅ Review image loaded successfully:", imageUrl);
+                            // Image loaded successfully
                           }}
                         />
                       );

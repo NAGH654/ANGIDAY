@@ -42,7 +42,6 @@ const AuthButton = ({ children }) => (
 const ForgotPasswordPage = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log("Forgot password form submitted!");
   };
 
   return (

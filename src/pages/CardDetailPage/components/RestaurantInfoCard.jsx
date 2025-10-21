@@ -3,13 +3,26 @@ import { MapPin, Phone, Clock, Globe, Star } from "lucide-react";
 
 const RestaurantInfoCard = ({ restaurant }) => {
   const [isFollowing, setIsFollowing] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  const [currentImageSrc, setCurrentImageSrc] = useState(restaurant.image);
+  
+  const handleImageError = () => {
+    if (!imageError) {
+      // Fallback to Unsplash placeholder
+      const fallbackImage = "https://images.unsplash.com/photo-1552566626-52f8b828add9?w=80&h=80&fit=crop&auto=format";
+      setCurrentImageSrc(fallbackImage);
+      setImageError(true);
+    }
+  };
+
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm">
       <div className="flex items-start space-x-4 mb-6">
         <img
-          src={restaurant.thumbnail}
+          src={currentImageSrc}
           alt={restaurant.name}
           className="w-20 h-20 rounded-xl object-cover"
+          onError={handleImageError}
         />
         <div className="flex-1">
           <div className="flex items-center space-x-2 mb-2">

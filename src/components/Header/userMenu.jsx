@@ -7,10 +7,6 @@ import {
   User,
   Sparkles,
   ChevronRight,
-  Heart,
-  MessageSquare,
-  Store,
-  TicketPercent,
 } from "lucide-react";
 import AvatarUserImage from "@components/Avatar_User_Image";
 import { motion, AnimatePresence } from "framer-motion";
@@ -53,10 +49,7 @@ const join = (base = "", rel = "") =>
 const fallbackEP = {
   USER_BASE: "/user",
   PROFILE: "profile",
-  FAVORITE_DISHES: "favorites/dishes",
-  FAVORITE_RESTAURANTS: "favorites/restaurants",
   ORDERS: "orders",
-  VOUCHERS: "vouchers",
   PACKAGE: "/package",
   HOMEPAGE: "/",
 };
@@ -67,11 +60,7 @@ const EP = {
     endPoint?.USER_BASE || endPoint?.CUSTOMER_BASE || fallbackEP.USER_BASE,
   PROFILE:
     endPoint?.PROFILE || endPoint?.CUSTOMER_PROFILE || fallbackEP.PROFILE,
-  FAVORITE_DISHES: endPoint?.FAVORITE_DISHES || fallbackEP.FAVORITE_DISHES,
-  FAVORITE_RESTAURANTS:
-    endPoint?.FAVORITE_RESTAURANTS || fallbackEP.FAVORITE_RESTAURANTS,
   ORDERS: endPoint?.ORDERS || fallbackEP.ORDERS,
-  VOUCHERS: endPoint?.VOUCHERS || fallbackEP.VOUCHERS,
   PACKAGE: endPoint?.PACKAGE || fallbackEP.PACKAGE,
   HOMEPAGE: endPoint?.HOMEPAGE || fallbackEP.HOMEPAGE,
 };
@@ -112,38 +101,6 @@ const UserMenu = ({
       color: "text-gray-700",
       hoverColor: "hover:bg-purple-50 hover:text-purple-700",
       iconBg: "group-hover:bg-purple-100",
-    },
-    {
-      icon: TicketPercent,
-      label: "Voucher của tôi",
-      to: join(EP.USER_BASE, EP.VOUCHERS),
-      color: "text-gray-700",
-      hoverColor: "hover:bg-violet-50 hover:text-violet-700",
-      iconBg: "group-hover:bg-violet-100",
-    },
-    {
-      icon: Heart,
-      label: "Món ăn yêu thích",
-      to: join(EP.USER_BASE, EP.FAVORITE_DISHES),
-      color: "text-gray-700",
-      hoverColor: "hover:bg-rose-50 hover:text-rose-700",
-      iconBg: "group-hover:bg-rose-100",
-    },
-    {
-      icon: Store,
-      label: "Nhà hàng yêu thích",
-      to: join(EP.USER_BASE, EP.FAVORITE_RESTAURANTS),
-      color: "text-gray-700",
-      hoverColor: "hover:bg-amber-50 hover:text-amber-700",
-      iconBg: "group-hover:bg-amber-100",
-    },
-    {
-      icon: MessageSquare,
-      label: "Bài đánh giá của tôi",
-      to: join(EP.USER_BASE, EP.MY_REVIEWS),
-      color: "text-gray-700",
-      hoverColor: "hover:bg-sky-50 hover:text-sky-700",
-      iconBg: "group-hover:bg-sky-100",
     },
   ];
 

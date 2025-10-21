@@ -161,11 +161,10 @@ const ReviewCard = ({ review }) => {
                     alt="review"
                     className="w-28 h-20 object-cover rounded-lg border border-gray-100"
                     onError={(e) => {
-                      console.log("❌ Image failed to load:", imageUrl);
                       e.target.style.display = 'none';
                     }}
                     onLoad={() => {
-                      console.log("✅ Image loaded successfully:", imageUrl);
+                      // Image loaded successfully
                     }}
                   />
                 );

@@ -13,7 +13,7 @@ import RightSidebar from "./components/RightSidebar";
 import { useGetRestaurantByIdQuery, useGetRestaurantReviewsQuery, useGetRestaurantPostsQuery, useGetSignatureFoodsQuery } from "@redux/api/Restaurant/restaurantApi";
 import { BASE_URL } from "@redux/api/baseApi";
 
-const ImageParams = "?w=960&h=540&fit=crop";
+const ImageParams = "&w=960&h=540&fit=crop";
 
 const CardDetailPage = () => {
   const { id } = useParams();
@@ -25,14 +25,32 @@ const CardDetailPage = () => {
   // map API -> component props
   const restaurant = React.useMemo(() => {
     if (!r) return null;
+    
+    // Use same image logic as HomePage
+    const storageBase = import.meta.env.DEV
+      ? "https://angiday-production-c5c0.up.railway.app/api"
+      : BASE_URL;
+    
+    let imageUrl;
+    if (r.imageUrl) {
+      // Try Storage API with same logic as HomePage
+      if (r.imageUrl.startsWith('uploads/restaurant/')) {
+        imageUrl = `${storageBase}/Storage/view?key=${encodeURIComponent(r.imageUrl)}${ImageParams}`;
+      } else if (r.imageUrl.startsWith('uploads/image/restaurant/')) {
+        imageUrl = `${storageBase}/Storage/view?key=${encodeURIComponent(r.imageUrl)}${ImageParams}`;
+      } else {
+        imageUrl = `${storageBase}/Storage/view?key=${encodeURIComponent(r.imageUrl)}${ImageParams}`;
+      }
+    } else {
+      // Fallback to Unsplash
+      imageUrl = `https://images.unsplash.com/photo-1552566626-52f8b828add9${ImageParams}`;
+    }
+    
     return {
       id: r.id,
       name: r.name,
       address: r.address || "",
-      image:
-        r.avatarUrl
-          ? `${String(BASE_URL).replace(/\/$/, "")}/${String(r.avatarUrl).replace(/^\/+/, "")}${ImageParams}`
-          : `https://images.unsplash.com/photo-1552566626-52f8b828add9${ImageParams}`,
+      image: imageUrl,
       rating: r.averagePoint ?? 5,
       followers: r.totalFollowers ?? 0,
       totalReviews: reviewsData?.length ?? 0,

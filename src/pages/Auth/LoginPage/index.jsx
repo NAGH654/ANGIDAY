@@ -152,9 +152,6 @@ const LoginPage = () => {
         dispatch(setCredentials(safePayload));
         toast.success("Đăng nhập thành công!");
         
-        // Debug: Log credentials
-        console.log("🔑 Login successful, credentials:", safePayload);
-        console.log("🔍 User role:", raw?.roleName || raw?.role);
         
         // Fetch role using /User/me then redirect
         try {
@@ -196,12 +193,6 @@ const LoginPage = () => {
       const currentUrl = window.location.href;
       const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "1042609021742-tflr2gbgb5c60aktv5r42pf23isocgg8.apps.googleusercontent.com";
       
-      console.log("🔍 Google Login Debug Info:");
-      console.log("Current origin:", currentOrigin);
-      console.log("Current URL:", currentUrl);
-      console.log("Google Client ID:", clientId);
-      console.log("Environment:", import.meta.env.MODE);
-      console.log("Is Vercel:", currentOrigin.includes('vercel.app'));
 
       // Configure Google OAuth
       window.google.accounts.id.initialize({
@@ -213,12 +204,8 @@ const LoginPage = () => {
 
       // Prompt for Google login
       window.google.accounts.id.prompt((notification) => {
-        console.log("Google login notification:", notification);
-        
         if (notification.isNotDisplayed()) {
-          console.log("❌ Google login prompt not displayed:", notification);
           const reason = notification.getNotDisplayedReason();
-          console.log("❌ Reason:", reason);
           
           if (reason === "unregistered_origin") {
             toast.error(`Domain ${currentOrigin} chưa được đăng ký. Vui lòng thêm vào Google Console.`);
@@ -231,7 +218,6 @@ const LoginPage = () => {
           }
           
           // Fallback: try renderButton method
-          console.log("🔄 Trying fallback renderButton method...");
           try {
             window.google.accounts.id.renderButton(
               document.getElementById("google-signin-button"),
@@ -244,17 +230,13 @@ const LoginPage = () => {
               }
             );
           } catch (fallbackError) {
-            console.error("❌ Fallback also failed:", fallbackError);
+            // Fallback failed
           }
         } else if (notification.isSkippedMoment()) {
-          console.log("⏭️ Google login skipped:", notification);
           toast.error("Google login bị bỏ qua. Vui lòng thử lại.");
-        } else {
-          console.log("✅ Google login prompt displayed successfully");
         }
       });
     } catch (error) {
-      console.error("Google login error:", error);
       toast.error("Không thể đăng nhập với Google. Vui lòng thử lại.");
     }
   };
@@ -262,9 +244,6 @@ const LoginPage = () => {
   const handleGoogleCallback = async (response) => {
     try {
       const { credential } = response;
-      console.log("🔑 Google ID Token received:", credential);
-      console.log("🔍 Token length:", credential?.length);
-      console.log("🔍 Token preview:", credential?.substring(0, 50) + "...");
       
       if (!credential) {
         toast.error("Không thể lấy thông tin từ Google.");
@@ -289,9 +268,6 @@ const LoginPage = () => {
         dispatch(setCredentials(safePayload));
         toast.success("Đăng nhập Google thành công!");
         
-        // Debug: Log credentials
-        console.log("🔑 Google login successful, credentials:", safePayload);
-        console.log("🔍 User role:", raw?.roleName || raw?.role);
         
         // Fetch role using /User/me then redirect
         try {

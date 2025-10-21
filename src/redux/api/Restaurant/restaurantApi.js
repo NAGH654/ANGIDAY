@@ -46,7 +46,13 @@ export const restaurantApi = baseApi.injectEndpoints({
       transformResponse: (response) => response?.data || [],
       providesTags: ["RestaurantBookmark"],
     }),
+    getRestaurantRecommendations: build.query({
+      query: () => ({ url: "/Restaurant/restaurant-recommendation" }),
+      keepUnusedDataFor: 300,
+      transformResponse: (response) => response?.data || [],
+      providesTags: ["RestaurantBookmark"],
+    }),
   }),
 });
 
-export const { useGetRestaurantsByTagsQuery, useGetAllRestaurantsQuery, useGetRestaurantByIdQuery, useGetSignatureFoodsQuery, useGetRestaurantReviewsQuery, useGetRestaurantPostsQuery, useGetRestaurantsByUserTagsQuery } = restaurantApi;
+export const { useGetRestaurantsByTagsQuery, useGetAllRestaurantsQuery, useGetRestaurantByIdQuery, useGetSignatureFoodsQuery, useGetRestaurantReviewsQuery, useGetRestaurantPostsQuery, useGetRestaurantsByUserTagsQuery, useGetRestaurantRecommendationsQuery } = restaurantApi;

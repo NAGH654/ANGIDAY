@@ -10,6 +10,7 @@ import {
   setIsTyping, 
   setIsOpen 
 } from "@redux/features/chatSlice";
+import IntroMessage from "@components/IntroMessage";
 // import toast from "react-hot-toast"; // Uncomment when needed
 
 // Mock messages for demo when backend is not available
@@ -25,10 +26,13 @@ const initialMockMessages = [
 const ChatWidget = () => {
   const dispatch = useDispatch();
   const { currentConversationId, isTyping, isOpen } = useSelector((state) => state.chat);
+  const accessToken = useSelector((s) => s?.auth?.accessToken);
   
   const [newMessage, setNewMessage] = useState("");
   const [localMessages, setLocalMessages] = useState(initialMockMessages);
   const [nextMessageId, setNextMessageId] = useState(2);
+  const [showIntroMessage, setShowIntroMessage] = useState(false);
+  const [hasShownIntro, setHasShownIntro] = useState(false);
   const messagesEndRef = useRef(null);
 
   // API hooks - now enabled!
@@ -49,12 +53,23 @@ const ChatWidget = () => {
     scrollToBottom();
   }, [messages]);
 
+  // Show intro message when user logs in (only once)
+  useEffect(() => {
+    if (accessToken && !hasShownIntro) {
+      setShowIntroMessage(true);
+      setHasShownIntro(true);
+    } else if (!accessToken) {
+      // Reset when user logs out
+      setHasShownIntro(false);
+      setShowIntroMessage(false);
+    }
+  }, [accessToken, hasShownIntro]);
+
   const handleOpenChat = async () => {
     dispatch(setIsOpen(true));
     
     // Simple approach: just open chat and load messages
     if (!currentConversationId) {
-      console.log("🔍 Opening chat - messages will be loaded automatically");
       dispatch(setCurrentConversation("chat_active"));
       // Messages will be loaded via useGetChatMessagesQuery hook
     }
@@ -74,16 +89,11 @@ const ChatWidget = () => {
     dispatch(setIsTyping(true));
     
     try {
-      console.log("📤 Sending message via API:", messageContent);
       await sendMessage({ content: messageContent }).unwrap();
-      console.log("✅ Message sent successfully");
       // Messages will be automatically refetched via invalidatesTags
       refetchMessages();
     } catch (error) {
-      console.error("❌ Failed to send message via API:", error);
-      
       // Fallback to local demo mode
-      console.log("🔄 Falling back to demo mode");
       
       // Add user message immediately
       const userMessage = {
@@ -139,8 +149,19 @@ const ChatWidget = () => {
     }),
   });
 
+  // Don't render anything if user is not logged in
+  if (!accessToken) {
+    return null;
+  }
+
   return (
     <div className="fixed bottom-6 right-6 z-50">
+      {/* Intro Message */}
+      <IntroMessage 
+        isVisible={showIntroMessage} 
+        onClose={() => setShowIntroMessage(false)} 
+      />
+
       {/* Chat Button */}
       {!isOpen && (
         <button

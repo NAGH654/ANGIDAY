@@ -97,7 +97,6 @@ function EditRestaurantProfilePage() {
 
   const onSave = () => {
     // TODO: call API
-    console.log("Saving form:", form);
     alert("Đã lưu thay đổi (demo)");
   };
 
