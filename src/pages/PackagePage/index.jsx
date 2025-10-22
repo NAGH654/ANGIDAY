@@ -43,17 +43,15 @@ function PackagePage() {
       popular: true,
       gradient: "from-pink-500 via-purple-500 to-indigo-500",
       features: [
-        "Gợi ý địa điểm cá nhân hóa với AI",
-        "Lưu trữ yêu thích không giới hạn",
-        "Trò chuyện với GPT Bot thông minh",
-        "Hỗ trợ ưu tiên 24/7",
-        "Đánh giá và review chi tiết",
-        "Thông báo ưu đãi độc quyền",
+        "Đăng bài không giới hạn",
+        "Lưu trữ không giới hạn",
+        "Gắn link affiliate",
+        "Tính năng gợi ý cá nhân hoá nâng cao",
       ],
       buttonText: "Bắt đầu ngay hôm nay",
       stats: { users: "50K+", rating: "4.9" },
     },
-    {
+    /* {
       id: "business",
       name: "Chủ nhà hàng",
       subtitle: "Dành cho chủ nhà hàng và doanh nghiệp",
@@ -76,7 +74,7 @@ function PackagePage() {
       ],
       buttonText: "Nâng cấp ngay",
       stats: { users: "5K+", rating: "4.8" },
-    },
+    }, */
   ];
 
   // Enhanced payment methods
@@ -218,7 +216,7 @@ function PackagePage() {
 
         {/* Pricing Cards */}
         <div className="max-w-6xl mx-auto px-4 mb-20">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+          <div className={`grid grid-cols-1 ${packages.length === 1 ? 'place-items-center' : 'lg:grid-cols-2'} gap-8 lg:gap-12`}>
             {packages.map((pkg, index) => (
               <div
                 key={pkg.id}

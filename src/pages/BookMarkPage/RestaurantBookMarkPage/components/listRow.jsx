@@ -1,5 +1,5 @@
 import React from "react";
-import { Heart, Star, MapPin, Clock, Award, Zap } from "lucide-react";
+import { Heart, Star, MapPin, Clock, Award } from "lucide-react";
 
 const ListRow = ({ r, isFav, onToggleFav }) => {
   return (
@@ -37,7 +37,10 @@ const ListRow = ({ r, isFav, onToggleFav }) => {
                   </span>
                 )}
               </div>
-              <p className="text-gray-500 text-lg mb-3">{r.category}</p>
+              <p className="text-gray-500 text-lg mb-2 flex items-center gap-2"><MapPin size={16} />{r.address}</p>
+              {r.description && (
+                <p className="text-gray-600 mb-3 line-clamp-2">{r.description}</p>
+              )}
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 text-sm text-gray-600">
                 <div className="flex items-center gap-2">
@@ -46,20 +49,10 @@ const ListRow = ({ r, isFav, onToggleFav }) => {
                   <span>({r.reviews} đánh giá)</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <MapPin size={16} />
-                  <span>{r.distance}</span>
-                </div>
-                <div className="flex items-center gap-2">
                   <Clock size={16} />
                   <span>{r.openTime}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span>💰</span>
-                  <span>{r.priceRange}</span>
-                </div>
               </div>
-
-              <p className="text-gray-600 mt-3 font-medium">{r.address}</p>
             </div>
 
             <div className="flex items-center gap-3 md:gap-4">
@@ -69,10 +62,6 @@ const ListRow = ({ r, isFav, onToggleFav }) => {
                 aria-label={isFav ? "Bỏ lưu" : "Lưu"}
               >
                 <Heart size={20} className={`${isFav ? "text-pink-500 fill-current" : "text-pink-500"}`} />
-              </button>
-              <button className="px-6 md:px-4 py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-2xl font-bold hover:shadow-lg hover:scale-105 transition-all duration-200 inline-flex items-center gap-2">
-                <span>Đặt bàn</span>
-                <Zap size={16} />
               </button>
             </div>
           </div>
