@@ -1,7 +1,10 @@
 import React from "react";
+import { Link } from "react-router-dom";
+import { endPoint } from "@routes/router";
 import { Heart, Star, MapPin, Clock, Award } from "lucide-react";
 
 const GridCard = ({ r, isFav, onToggleFav }) => {
+  const detailTo = endPoint.RESTAURANT_DETAIL(r.id);
   return (
     <div className="group relative bg-white/90 backdrop-blur-sm rounded-xl shadow-md border border-white/60 hover:shadow-lg transition-all duration-500 transform hover:-translate-y-2 overflow-hidden">
       {r.isPopular && (
@@ -12,16 +15,18 @@ const GridCard = ({ r, isFav, onToggleFav }) => {
       )}
 
       <div className="relative overflow-hidden rounded-t-xl">
-        <img
-          src={r.image}
-          alt={r.name}
-          className="w-full h-56 object-cover group-hover:scale-110 transition-transform duration-700"
-          loading="lazy"
-          onError={(e) => {
-            e.currentTarget.src =
-              "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDQwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwMCIgaGVpZ2h0PSIzMDAiIGZpbGw9IiNGM0Y0RjYiLz48cGF0aCBkPSJNMjAwIDE1MEMyMDAgMTcyLjA5MSAyMDIgMTk0IDIwNCAxOTZDMjA2IDE5OCAyMjggMjAwIDI1MCAyMDBDMjc yIDIwMCAyOTQgMTk4IDI5NiAxOTZDMjk4IDE5NCAzMDAgMTcyLjA5MSAzMDAgMTUwQzMwMCAxMjcuOTA5IDI5OCAxMDYgMjk2IDEwNEMyOTQgMTAyIDI3MiAxMDAgMjUwIDEwMEMyMjggMTAwIDIwNiAxMDIgMjA0IDEwNEMyMDIgMTA2IDIwMCAxMjcuOTA5IDIwMCAxNTBaIiBmaWxsPSIjRDFENURCIi8+PC9zdmc+";
-          }}
-        />
+        <Link to={detailTo}>
+          <img
+            src={r.image}
+            alt={r.name}
+            className="w-full h-56 object-cover group-hover:scale-110 transition-transform duration-700"
+            loading="lazy"
+            onError={(e) => {
+              e.currentTarget.src =
+                "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDQwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwMCIgaGVpZ2h0PSIzMDAiIGZpbGw9IiNGM0Y0RjYiLz48cGF0aCBkPSJNMjAwIDE1MEMyMDAgMTcyLjA5MSAyMDIgMTk0IDIwNCAxOTZDMjA2IDE5OCAyMjggMjAwIDI1MCAyMDBDMjc yIDIwMCAyOTQgMTk4IDI5NiAxOTZDMjk4IDE5NCAzMDAgMTcyLjA5MSAzMDAgMTUwQzMwMCAxMjcuOTA5IDI5OCAxMDYgMjk2IDEwNEMyOTQgMTAyIDI3MiAxMDAgMjUwIDEwMEMyMjggMTAwIDIwNiAxMDIgMjA0IDEwNEMyMDIgMTA2IDIwMCAxMjcuOTA5IDIwMCAxNTBaIiBmaWxsPSIjRDFENURCIi8+PC9zdmc+";
+            }}
+          />
+        </Link>
 
         {r.isOnline && (
           <div className="absolute top-4 right-4">
@@ -33,7 +38,7 @@ const GridCard = ({ r, isFav, onToggleFav }) => {
         )}
 
         <button
-          onClick={() => onToggleFav(r.id)}
+          onClick={(e) => { e.stopPropagation(); onToggleFav(r.id); }}
           className="absolute bottom-4 right-4 w-12 h-12 bg-white/95 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-white hover:scale-110 transition-all duration-200 shadow-lg group/heart"
           aria-label={isFav ? "Bỏ lưu" : "Lưu"}
         >
@@ -46,7 +51,7 @@ const GridCard = ({ r, isFav, onToggleFav }) => {
 
       <div className="p-6">
         <h3 className="text-xl font-bold text-gray-900 mb-1 group-hover:text-pink-600 transition-colors line-clamp-1">
-          {r.name}
+          <Link to={detailTo}>{r.name}</Link>
         </h3>
         <p className="text-gray-500 text-sm mb-1 font-medium line-clamp-1 flex items-center gap-1"><MapPin size={14} />{r.address}</p>
         {r.description && (
