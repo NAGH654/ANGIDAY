@@ -15,6 +15,8 @@ import {
   useUnbookmarkRestaurantMutation,
 } from "@redux/api/User/userApi";
 
+const ImageParams = "&w=640&h=400&fit=crop";
+
 function RestaurantBookMarkPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearch = useDebouncedValue(searchQuery, 300);
@@ -37,20 +39,33 @@ function RestaurantBookMarkPage() {
 
   const apiRestaurants = useMemo(() => {
     const list = Array.isArray(apiBookmarks) ? apiBookmarks : [];
-    return list.map((r) => ({
-      id: r.id,
-      name: r.name,
-      address: r.address || "",
-      image:
-        r.avatarUrl
-          ? `${String(BASE_URL).replace(/\/$/, "")}/${String(r.avatarUrl).replace(/^\/+/, "")}`
-          : "https://images.unsplash.com/photo-1552566626-52f8b828add9?w=1200&h=800&fit=crop",
-      rating: r.averagePoint ?? 5,
-      reviews: r.totalReviews ?? 0,
-      distance: r.distance || "",
-      category: r.categoryName || "",
-      isPopular: Boolean(r.isPopular),
-    }));
+    const storageBase = import.meta.env.DEV
+      ? "https://angiday-production-c5c0.up.railway.app/api"
+      : BASE_URL;
+
+    return list.map((r) => {
+      let image;
+      if (r.imageUrl) {
+        image = `${storageBase}/Storage/view?key=${encodeURIComponent(r.imageUrl)}${ImageParams}`;
+      } else if (r.avatarUrl) {
+        image = `${String(BASE_URL).replace(/\/$/, "")}/${String(r.avatarUrl).replace(/^\/+/, "")}`;
+      } else {
+        image = "https://images.unsplash.com/photo-1552566626-52f8b828add9?w=640&h=400&fit=crop&auto=format";
+      }
+
+      return {
+        id: r.id,
+        name: r.name,
+        address: r.address || "",
+        description: r.description || "",
+        image,
+        rating: (typeof r.avgRating === 'number' ? r.avgRating : (typeof r.averagePoint === 'number' ? r.averagePoint : 0)),
+        reviews: (typeof r.ratingCount === 'number' ? r.ratingCount : (typeof r.totalReviews === 'number' ? r.totalReviews : 0)),
+        distance: r.distance || "",
+        category: r.categoryName || "",
+        isPopular: Boolean(r.isPopular),
+      };
+    });
   }, [apiBookmarks]);
 
   // Local favorite set mirrors server bookmarks; used for heart state and optimistic removal

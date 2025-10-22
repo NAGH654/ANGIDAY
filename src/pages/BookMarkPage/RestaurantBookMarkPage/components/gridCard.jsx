@@ -1,5 +1,5 @@
 import React from "react";
-import { Heart, Star, MapPin, Clock, Award, Zap } from "lucide-react";
+import { Heart, Star, MapPin, Clock, Award } from "lucide-react";
 
 const GridCard = ({ r, isFav, onToggleFav }) => {
   return (
@@ -48,9 +48,13 @@ const GridCard = ({ r, isFav, onToggleFav }) => {
         <h3 className="text-xl font-bold text-gray-900 mb-1 group-hover:text-pink-600 transition-colors line-clamp-1">
           {r.name}
         </h3>
+        <p className="text-gray-500 text-sm mb-1 font-medium line-clamp-1 flex items-center gap-1"><MapPin size={14} />{r.address}</p>
+        {r.description && (
+          <p className="text-gray-600 text-sm mb-3 line-clamp-2">{r.description}</p>
+        )}
         <p className="text-gray-500 text-sm mb-3 font-medium">{r.category}</p>
 
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <div className="flex items-center space-x-1">
               <Star size={16} className="text-yellow-400 fill-current" />
@@ -59,25 +63,10 @@ const GridCard = ({ r, isFav, onToggleFav }) => {
             <span className="text-gray-500 text-sm">({r.reviews})</span>
           </div>
           <div className="flex items-center space-x-1 text-gray-500">
-            <MapPin size={14} />
-            <span className="text-sm font-medium">{r.distance}</span>
-          </div>
-        </div>
-
-        <div className="space-y-2 mb-6 text-gray-600">
-          <div className="flex items-center space-x-2">
             <Clock size={14} />
-            <span className="text-sm">{r.openTime}</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <span className="text-sm font-medium">💰 {r.priceRange}</span>
+            <span className="text-sm font-medium">{r.openTime}</span>
           </div>
         </div>
-
-        <button className="w-full bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white py-2 rounded-xl font-medium text-lg hover:shadow-md hover:scale-[1.02] active:scale-95 transition-all duration-200 flex items-center justify-center gap-2">
-          <span>Đặt bàn ngay</span>
-          <Zap size={18} />
-        </button>
       </div>
     </div>
   );
