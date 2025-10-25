@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useMemo as useReactMemo } from "react";
+import React, { useMemo, useState, useMemo as useReactMemo, useEffect } from "react";
 import { Search } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import CustomerSideBar from "@layout/SideBar";
@@ -81,10 +81,10 @@ function CommunityPage() {
         image: p.imageUrl && !p.imageUrl.startsWith('blob:') ? `${BASE_URL}/Storage/view?key=${p.imageUrl}` : null,
         hasInvalidImage: p.imageUrl?.startsWith('blob:'),
         interactions: {
-          likes: 0,
-          comments: 0,
+          likes: typeof p.totalLikes === 'number' ? p.totalLikes : 0,
+          comments: typeof p.totalComments === 'number' ? p.totalComments : 0,
           shares: 0,
-          saves: 0,
+          saves: typeof p.totalBookmarks === 'number' ? p.totalBookmarks : 0,
         },
         isLiked: likedIds.has(p.id ?? p.postId),
         isSaved: bookmarkedIds.has(p.id ?? p.postId),
@@ -92,18 +92,39 @@ function CommunityPage() {
         isPopular: false,
       };
       
-      // Debug log cho avatar
-      console.log(`Post ${idx} - Avatar:`, {
-        userAvatar: p.userAvatar,
-        hasUserAvatar: !!p.userAvatar,
-        finalAvatarUrl: mappedPost.author.avatar
-      });
       
       return mappedPost;
     });
   }, [myPosts, bookmarkedList]);
 
   const [postList, setPostList] = useState([]);
+  const [showCommentsForPostId, setShowCommentsForPostId] = useState(null);
+  const [commentsData, setCommentsData] = useState([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+
+  const fetchComments = async (postId) => {
+    setCommentsLoading(true);
+    try {
+      const res = await fetch(`${BASE_URL}/Post/detail-post/${postId}`);
+      const data = await res.json();
+      setCommentsData(data?.data?.comments || []);
+    } catch (e) {
+      setCommentsData([]);
+    }
+    setCommentsLoading(false);
+  };
+
+  useEffect(() => {
+    if (showCommentsForPostId) {
+      fetchComments(showCommentsForPostId);
+    } else {
+      setCommentsData([]);
+    }
+  }, [showCommentsForPostId]);
+
+  const handleShowComments = (postId) => {
+    setShowCommentsForPostId(postId);
+  };
 
   React.useEffect(() => {
     // Use only API posts; empty list will show empty state
@@ -303,6 +324,7 @@ function CommunityPage() {
                   post={post}
                   onLike={handleLike}
                   onSave={handleSave}
+                  onShowComments={handleShowComments}
                 />
               ))}
               {filteredPosts.length === 0 && !isLoading && (
@@ -318,6 +340,30 @@ function CommunityPage() {
           {/* Right */}
           <RightSidebar topUsers={topUsers} />
         </div>
+        {/* Comments Modal */}
+        {showCommentsForPostId && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center z-50">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 p-6 relative">
+              <button onClick={() => setShowCommentsForPostId(null)} className="absolute top-3 right-3 w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center">
+                <span className="text-xl">×</span>
+              </button>
+              <h3 className="font-bold text-lg mb-4">Bình luận</h3>
+              {commentsLoading && <div className="py-8 text-center text-gray-500">Đang tải...</div>}
+              {!commentsLoading && commentsData.length === 0 && <div className="py-8 text-center text-gray-500">Chưa có bình luận.</div>}
+              {!commentsLoading && commentsData.length > 0 && (
+                <div className="space-y-5 max-h-96 overflow-y-auto">
+                  {commentsData.map((c) => (
+                    <div key={c.id} className="rounded-xl bg-gray-100 p-4">
+                      <p className="font-semibold text-pink-700 mb-1">{c.username}</p>
+                      <p className="text-gray-700 leading-relaxed mb-1">{c.content}</p>
+                      <p className="text-sm text-gray-500">{c.createdAt ? new Date(c.createdAt).toLocaleString() : ""}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

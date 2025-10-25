@@ -13,9 +13,11 @@ import RestaurantBookMarkPage from "@pages/BookMarkPage/RestaurantBookMarkPage/R
 import PostBookMarkPage from "@pages/BookMarkPage/PostBookMarkPage/PostBookMarkPage";
 import PackagePage from "@pages/PackagePage";
 import PostPage from "@pages/PostPage";
+
 import CardDetailPage from "@pages/CardDetailPage";
 import MenuPage from "@pages/CardDetailPage/MenuPage";
 import ReviewDetailPage from "@pages/CardDetailPage/ReviewDetailPage";
+import RestaurantProfilePage from "@pages/Profile/RestaurantProfile";
 import EditRestaurantProfilePage from "@pages/Profile/RestaurantProfile/EditRestaurantProfilePage";
 import UserProfilePage from "@pages/Profile/UserProfile";
 
@@ -38,6 +40,12 @@ function AppRoutes() {
           <Route
             path={`${endPoint.USER_BASE}/${endPoint.PROFILE}`}
             element={<UserProfilePage />}
+          />
+
+          {/* Restaurant Profile */}
+          <Route
+            path="/restaurant/profile"
+            element={<RestaurantProfilePage />}
           />
 
           {/* Chi tiết */}

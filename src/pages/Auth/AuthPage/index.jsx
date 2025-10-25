@@ -7,6 +7,7 @@ import AuthLayout from "../AuthLayout";
 // Pages
 import LoginPage from "../LoginPage";
 import RegisterPage from "../RegisterPage";
+import RestaurantRegisterPage from "../RestaurantRegisterPage";
 import ForgotPasswordPage from "../ForgotPasswordPage";
 
 const AuthPage = () => {
@@ -17,6 +18,8 @@ const AuthPage = () => {
     switch (view) {
       case "register":
         return <RegisterPage />;
+      case "restaurant-register":
+        return <RestaurantRegisterPage />;
       case "forgotPassword":
         return <ForgotPasswordPage />;
       default:

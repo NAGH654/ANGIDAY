@@ -16,7 +16,6 @@ export const userApi = baseApi.injectEndpoints({
       query: () => ({ url: "/User/community/post" }),
       providesTags: ["Auth"],
       transformResponse: (response) => {
-        console.log("🔍 getMyCommunityPosts API Response:", response);
         const d = response?.data;
         if (!d) return [];
         return Array.isArray(d) ? d : [d];
@@ -27,7 +26,6 @@ export const userApi = baseApi.injectEndpoints({
       query: (userId) => ({ url: `/User/${userId}/community-posts` }),
       providesTags: ["Auth"],
       transformResponse: (response) => {
-        console.log("🔍 getUserCommunityPosts API Response:", response);
         const d = response?.data;
         if (!d) return [];
         return Array.isArray(d) ? d : [d];
@@ -37,7 +35,6 @@ export const userApi = baseApi.injectEndpoints({
       query: () => ({ url: "/Post/user/review-post" }),
       providesTags: ["Auth"],
       transformResponse: (response) => {
-        console.log("🔍 getMyReviews API Response:", response);
         const d = response?.data;
         if (!d) return [];
         return Array.isArray(d) ? d : [d];
@@ -159,6 +156,7 @@ export const userApi = baseApi.injectEndpoints({
 
 export const {
   useGetMeQuery,
+  useLazyGetMeQuery,
   useGetMyCommunityPostsQuery,
   useGetUserCommunityPostsQuery,
   useGetMyReviewsQuery,

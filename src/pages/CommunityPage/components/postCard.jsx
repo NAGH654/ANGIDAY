@@ -5,19 +5,11 @@ import {
   Clock,
   MapPin,
   MessageCircle,
-  Share,
   Star,
   Bookmark,
 } from "lucide-react";
 
-const PostCard = ({ post, onLike, onSave }) => {
-  // Debug log để kiểm tra post data
-  console.log("PostCard received post:", {
-    id: post.id,
-    hasImage: !!post.image,
-    imageUrl: post.image,
-    content: post.content
-  });
+const PostCard = ({ post, onLike, onSave, onShowComments }) => {
 
   return (
     <article className="group bg-white/90 backdrop-blur-sm rounded-3xl shadow border border-white/60 hover:shadow-lg transition overflow-hidden">
@@ -117,11 +109,10 @@ const PostCard = ({ post, onLike, onSave }) => {
             className="w-full h-72 object-cover rounded-2xl shadow-sm group-hover:scale-[1.01] transition-transform"
             loading="lazy"
             onError={(e) => {
-              console.error("❌ Image failed to load:", post.image);
               e.target.style.display = 'none';
             }}
             onLoad={() => {
-              console.log("✅ Image loaded successfully:", post.image);
+              // Image loaded successfully
             }}
           />
         </div>
@@ -152,7 +143,6 @@ const PostCard = ({ post, onLike, onSave }) => {
           <div className="flex items-center gap-5">
             <span>{post.interactions.likes} lượt thích</span>
             <span>{post.interactions.comments} bình luận</span>
-            <span>{post.interactions.shares} chia sẻ</span>
           </div>
           <span>{post.interactions.saves} lượt lưu</span>
         </div>
@@ -175,14 +165,12 @@ const PostCard = ({ post, onLike, onSave }) => {
               Thích
             </button>
 
-            <button className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-sm font-semibold text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition">
+            <button
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-sm font-semibold text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition"
+              onClick={() => onShowComments && onShowComments(post.id)}
+            >
               <MessageCircle size={18} />
               Bình luận
-            </button>
-
-            <button className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-sm font-semibold text-gray-700 hover:bg-green-50 hover:text-green-600 transition">
-              <Share size={18} />
-              Chia sẻ
             </button>
           </div>
 

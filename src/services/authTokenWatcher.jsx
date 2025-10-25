@@ -9,8 +9,10 @@ function getTokenFromStorage() {
     const raw = localStorage.getItem("auth") || sessionStorage.getItem("auth");
     if (!raw) return null;
     const obj = JSON.parse(raw);
-    return obj?.accessToken || null;
-  } catch {
+    const token = obj?.accessToken || null;
+    return token;
+  } catch (error) {
+    console.error("❌ getTokenFromStorage error:", error);
     return null;
   }
 }
