@@ -100,7 +100,7 @@ function FloatingSuggestion({ view, mobileOpen, setMobileOpen }) {
     <>
       {/* Desktop: sát cạnh phải của card (ẩn trên màn nhỏ) */}
       <div
-        className="hidden xl:block fixed top-1/4 -translate-y-1/3 z-40"
+        className="hidden xl:block fixed top-1/3 -translate-y-1/3 z-40"
         style={{ left: DESKTOP_LEFT }}
       >
         <SuggestionCard variant={variant} />

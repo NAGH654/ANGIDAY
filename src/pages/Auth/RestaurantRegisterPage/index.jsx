@@ -1,13 +1,24 @@
 import React, { useState } from "react";
-import { useForm } from "react-hook-form";
+import {
+  User,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  Building2,
+  MapPin,
+  FileText,
+} from "lucide-react";
 import { toast } from "react-toastify";
-import { Eye, EyeOff } from "lucide-react";
-import { useRegisterRestaurantMutation } from "@redux/api/Auth/authApi";
 import { useDispatch } from "react-redux";
-import { setCredentials } from "@redux/features/authSlice";
 import { useNavigate } from "react-router-dom";
+import { useRegisterRestaurantMutation } from "@redux/api/Auth/authApi"; // <-- chỉ còn registerRestaurant
+import { setCredentials } from "@redux/features/authSlice";
 import { endPoint } from "@routes/router";
+import LoadingSpinner from "@components/LoadingSpinner";
 
+/* ========== helpers ========== */
+// đồng bộ với LoginPage / RegisterPage
 function ensureExpiry(tok, expUtc, expiresInSec) {
   const NOW = Date.now();
   if (expUtc) {
@@ -25,31 +36,139 @@ function ensureExpiry(tok, expUtc, expiresInSec) {
     if (Number.isFinite(ms) && ms > NOW + 30_000)
       return new Date(ms).toISOString();
   } catch {}
-  return new Date(NOW + 60 * 60 * 1000).toISOString();
+  return new Date(NOW + 60 * 60 * 1000).toISOString(); // fallback 60 phút
 }
 
+/* ========== shared UI (đồng bộ với RegisterPage) ========== */
+const InputField = ({
+  type,
+  placeholder,
+  icon: Icon,
+  value,
+  onChange,
+  disabled,
+}) => {
+  const [show, setShow] = useState(false);
+  const inputType = type === "password" && show ? "text" : type;
+
+  return (
+    <div className="mb-4 relative">
+      <input
+        type={inputType}
+        placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        className="w-full px-10 py-3 text-sm text-gray-700 border border-gray-300 rounded-lg 
+                   focus:outline-none focus:ring-1 focus:ring-pink-500 
+                   hover:border-pink-400 hover:shadow-md hover:shadow-pink-100
+                   transition-all duration-300 disabled:opacity-60"
+      />
+      {Icon && (
+        <Icon
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+          size={18}
+        />
+      )}
+      {type === "password" && (
+        <button
+          type="button"
+          onClick={() => setShow(!show)}
+          disabled={disabled}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-pink-500 transition-colors disabled:opacity-60"
+        >
+          {show ? <EyeOff size={18} /> : <Eye size={18} />}
+        </button>
+      )}
+    </div>
+  );
+};
+
+const TextAreaField = ({
+  placeholder,
+  icon: Icon,
+  value,
+  onChange,
+  disabled,
+  rows = 4,
+}) => (
+  <div className="mb-4 relative">
+    <textarea
+      rows={rows}
+      placeholder={placeholder}
+      value={value}
+      onChange={onChange}
+      disabled={disabled}
+      className="w-full px-10 py-3 text-sm text-gray-700 border border-gray-300 rounded-lg 
+                 focus:outline-none focus:ring-1 focus:ring-pink-500 
+                 hover:border-pink-400 hover:shadow-md hover:shadow-pink-100
+                 transition-all duration-300 disabled:opacity-60 resize-none"
+    />
+    {Icon && <Icon className="absolute left-3 top-3 text-gray-400" size={18} />}
+  </div>
+);
+
+const AuthButton = ({ children, onClick, disabled }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    disabled={disabled}
+    className="w-full bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white font-semibold py-3 rounded-lg 
+               flex items-center justify-center gap-2 shadow-lg hover:brightness-90 
+               hover:shadow-xl hover:scale-[1.03] active:scale-[0.97] 
+               transition-all duration-300 ease-out disabled:opacity-60"
+  >
+    {children}
+  </button>
+);
+
+/* ========== page ========== */
 export default function RestaurantRegisterPage() {
-  const [showPassword, setShowPassword] = useState(false);
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm();
-  const [registerRestaurant, { isLoading }] = useRegisterRestaurantMutation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [registerRestaurant, { isLoading }] = useRegisterRestaurantMutation();
 
-  const onSubmit = async (data) => {
+  const [form, setForm] = useState({
+    username: "",
+    email: "",
+    password: "",
+    restaurantName: "",
+    address: "",
+    description: "",
+  });
+
+  const onChange = (k) => (e) =>
+    setForm((s) => ({ ...s, [k]: e.target.value }));
+
+  const validate = () => {
+    if (
+      !form.username ||
+      !form.email ||
+      !form.password ||
+      !form.restaurantName ||
+      !form.address
+    ) {
+      toast.warn(
+        "Vui lòng điền đủ: Tên đăng nhập, Email, Mật khẩu, Tên nhà hàng, Địa chỉ"
+      );
+      return false;
+    }
+    return true;
+  };
+
+  const handleRegister = async () => {
+    if (!validate()) return;
     try {
-      const res = await registerRestaurant({
-        username: data.username?.trim(),
-        email: data.email?.trim(),
-        password: data.password,
-        restaurantName: data.restaurantName?.trim(),
-        address: data.address?.trim(),
-        description: data.description?.trim(),
-      }).unwrap();
+      const payload = {
+        username: form.username.trim(),
+        email: form.email.trim(),
+        password: form.password,
+        restaurantName: form.restaurantName.trim(),
+        address: form.address.trim(),
+        description: form.description.trim(),
+      };
 
+      const res = await registerRestaurant(payload).unwrap();
       const raw = res?.data ?? res;
       const token = raw?.accessToken || raw?.token;
       const emailVerified =
@@ -63,7 +182,7 @@ export default function RestaurantRegisterPage() {
         return;
       }
 
-      // lưu phiên (để nếu cần gọi API khác sau đăng ký)
+      // Lưu phiên (nếu BE đã trả token)
       dispatch(
         setCredentials({
           ...raw,
@@ -74,6 +193,7 @@ export default function RestaurantRegisterPage() {
       );
 
       if (!emailVerified) {
+        // KHÔNG gọi POST gửi email nữa (BE đã tự gửi) → chỉ điều hướng
         toast.success(
           "Đăng ký thành công! Vui lòng kiểm tra email để xác thực."
         );
@@ -92,157 +212,81 @@ export default function RestaurantRegisterPage() {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-      {/* các input giữ nguyên như phiên bản mới nhất của bạn */}
-      {/* Username */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Tên đăng nhập *
-        </label>
-        <input
-          {...register("username", {
-            required: "Tên đăng nhập là bắt buộc",
-            minLength: { value: 3, message: "Ít nhất 3 ký tự" },
-          })}
-          type="text"
-          placeholder="Nhập tên đăng nhập"
-          disabled={isLoading}
-          className="w-full px-4 py-3 rounded-xl border border-gray-300 bg-white placeholder:text-gray-400
-                     focus:outline-none focus:ring-1 focus:ring-pink-500 hover:border-pink-400 hover:shadow-md hover:shadow-pink-100"
-        />
-        {errors.username && (
-          <p className="mt-1 text-sm text-red-600">{errors.username.message}</p>
+    <>
+      <InputField
+        type="text"
+        placeholder="Tên đăng nhập"
+        icon={User}
+        value={form.username}
+        onChange={onChange("username")}
+        disabled={isLoading}
+      />
+
+      <InputField
+        type="email"
+        placeholder="Email"
+        icon={Mail}
+        value={form.email}
+        onChange={onChange("email")}
+        disabled={isLoading}
+      />
+
+      <InputField
+        type="password"
+        placeholder="Mật khẩu"
+        icon={Lock}
+        value={form.password}
+        onChange={onChange("password")}
+        disabled={isLoading}
+      />
+
+      <InputField
+        type="text"
+        placeholder="Tên nhà hàng"
+        icon={Building2}
+        value={form.restaurantName}
+        onChange={onChange("restaurantName")}
+        disabled={isLoading}
+      />
+
+      <InputField
+        type="text"
+        placeholder="Địa chỉ nhà hàng"
+        icon={MapPin}
+        value={form.address}
+        onChange={onChange("address")}
+        disabled={isLoading}
+      />
+
+      <TextAreaField
+        placeholder="Mô tả về nhà hàng của bạn…"
+        icon={FileText}
+        value={form.description}
+        onChange={onChange("description")}
+        disabled={isLoading}
+        rows={4}
+      />
+
+      <AuthButton onClick={handleRegister} disabled={isLoading}>
+        {isLoading && (
+          <LoadingSpinner inline size="5" color="white" className="border-4" />
         )}
-      </div>
-
-      {/* Email */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Email *
-        </label>
-        <input
-          {...register("email", {
-            required: "Email là bắt buộc",
-            pattern: {
-              value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-              message: "Email không hợp lệ",
-            },
-          })}
-          type="email"
-          placeholder="Nhập email"
-          disabled={isLoading}
-          className="w-full px-4 py-3 rounded-xl border border-gray-300 bg-white placeholder:text-gray-400
-                     focus:outline-none focus:ring-1 focus:ring-pink-500 hover:border-pink-400 hover:shadow-md hover:shadow-pink-100"
-        />
-        {errors.email && (
-          <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
-        )}
-      </div>
-
-      {/* Password */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Mật khẩu *
-        </label>
-        <div className="relative">
-          <input
-            {...register("password", {
-              required: "Mật khẩu là bắt buộc",
-              minLength: { value: 6, message: "Ít nhất 6 ký tự" },
-            })}
-            type={showPassword ? "text" : "password"}
-            placeholder="Nhập mật khẩu"
-            disabled={isLoading}
-            className="w-full px-4 py-3 pr-12 rounded-xl border border-gray-300 bg-white placeholder:text-gray-400
-                       focus:outline-none focus:ring-1 focus:ring-pink-500 hover:border-pink-400 hover:shadow-md hover:shadow-pink-100"
-          />
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-          >
-            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-          </button>
-        </div>
-        {errors.password && (
-          <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
-        )}
-      </div>
-
-      {/* Restaurant Name */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Tên nhà hàng *
-        </label>
-        <input
-          {...register("restaurantName", {
-            required: "Tên nhà hàng là bắt buộc",
-            minLength: { value: 2, message: "Ít nhất 2 ký tự" },
-          })}
-          type="text"
-          placeholder="Nhập tên nhà hàng"
-          disabled={isLoading}
-          className="w-full px-4 py-3 rounded-xl border border-gray-300 bg-white placeholder:text-gray-400
-                     focus:outline-none focus:ring-1 focus:ring-pink-500 hover:border-pink-400 hover:shadow-md hover:shadow-pink-100"
-        />
-        {errors.restaurantName && (
-          <p className="mt-1 text-sm text-red-600">
-            {errors.restaurantName.message}
-          </p>
-        )}
-      </div>
-
-      {/* Address */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Địa chỉ *
-        </label>
-        <input
-          {...register("address", {
-            required: "Địa chỉ là bắt buộc",
-            minLength: { value: 5, message: "Ít nhất 5 ký tự" },
-          })}
-          type="text"
-          placeholder="Nhập địa chỉ nhà hàng"
-          disabled={isLoading}
-          className="w-full px-4 py-3 rounded-xl border border-gray-300 bg-white placeholder:text-gray-400
-                     focus:outline-none focus:ring-1 focus:ring-pink-500 hover:border-pink-400 hover:shadow-md hover:shadow-pink-100"
-        />
-        {errors.address && (
-          <p className="mt-1 text-sm text-red-600">{errors.address.message}</p>
-        )}
-      </div>
-
-      {/* Description */}
-      <div>
-        <label className="block text-sm text-gray-700 mb-2">
-          Mô tả nhà hàng
-        </label>
-        <textarea
-          {...register("description")}
-          rows={4}
-          placeholder="Mô tả về nhà hàng của bạn..."
-          disabled={isLoading}
-          className="w-full px-4 py-3 rounded-xl border border-gray-300 bg-white placeholder:text-gray-400 resize-none
-                     focus:outline-none focus:ring-1 focus:ring-pink-500 hover:border-pink-400 hover:shadow-md hover:shadow-pink-100"
-        />
-      </div>
-
-      {/* Actions */}
-      <div className="pt-1">
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="w-full inline-flex items-center justify-center px-6 py-3 rounded-xl font-medium text-white
-                     bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700
-                     focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2 disabled:opacity-50"
+        {isLoading ? "Đang đăng ký..." : "Đăng ký nhà hàng"}
+        <svg
+          className="w-4 h-4 ml-2"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={1.5}
+          stroke="currentColor"
         >
-          {isLoading ? "Đang đăng ký..." : "Đăng ký nhà hàng"}
-        </button>
-        <p className="mt-3 text-xs text-gray-500 text-center">
-          Bằng việc đăng ký, bạn đồng ý với Điều khoản & Chính sách bảo mật.
-        </p>
-      </div>
-    </form>
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"
+          />
+        </svg>
+      </AuthButton>
+    </>
   );
 }

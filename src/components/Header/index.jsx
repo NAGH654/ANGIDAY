@@ -5,7 +5,7 @@ import UserMenu from "./userMenu";
 import * as RouterEP from "@routes/router";
 import { useSelector } from "react-redux";
 
-const endPoint = RouterEP.endPoint || RouterEP.default || RouterEP;
+const endPoint = RouterEP.endPoint;
 const selectAuth = (s) => s.auth;
 
 const Header = () => {

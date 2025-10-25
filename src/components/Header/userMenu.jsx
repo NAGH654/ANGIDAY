@@ -13,7 +13,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cleanLogout } from "@utils/cleanLogout";
 // Nhận cả named lẫn default export cho endPoint để tránh vỡ import
 import * as RouterEP from "@routes/router";
-const endPoint = RouterEP.endPoint || RouterEP.default || RouterEP;
+const endPoint = RouterEP.endPoint ;
 
 // Selector auth tối giản
 const selectAuth = (s) => s.auth;
