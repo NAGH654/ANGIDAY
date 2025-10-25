@@ -1,9 +1,10 @@
+// src/redux/features/authSlice.js
 import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
   accessToken: null,
   tokenType: null,
-  user: null, // { id, username, fullName, roleId, email }
+  user: null, // { id, username, fullName, roleId, email, emailVerified }
   expiresAtUtc: null, // ISO string
   remember: true,
 };
@@ -52,23 +53,40 @@ const slice = createSlice({
   initialState,
   reducers: {
     setCredentials: (state, { payload }) => {
-      // Hỗ trợ cả dạng payload.user lẫn field lẻ
-      const u = payload.user || {};
-      state.accessToken = payload.accessToken || payload.token || null;
-      state.tokenType = payload.tokenType ?? "Bearer";
+      // Merge user cũ (nếu có) + user từ payload (nếu có)
+      const u = payload?.user || {};
+      const merged = { ...(state.user || {}), ...(u || {}) };
+
+      state.accessToken = payload?.accessToken || payload?.token || null;
+      state.tokenType = payload?.tokenType ?? "Bearer";
+
       state.user = {
-        id: payload.userId ?? u.id ?? u.userId ?? null,
-        username: payload.username ?? u.username ?? null,
-        fullName: payload.fullName ?? u.fullName ?? u.fullname ?? null,
-        roleId: payload.roleId ?? u.roleId ?? u.role ?? null,
-        email: payload.email ?? u.email ?? null,
+        ...merged,
+        id: payload?.userId ?? merged.id ?? merged.userId ?? null,
+        username: payload?.username ?? merged.username ?? null,
+        fullName:
+          payload?.fullName ?? merged.fullName ?? merged.fullname ?? null,
+        roleId: payload?.roleId ?? merged.roleId ?? merged.role ?? null,
+        email: payload?.email ?? merged.email ?? null,
+        // chuẩn hóa các biến thể từ BE
+        emailVerified:
+          payload?.emailVerified ??
+          merged.emailVerified ??
+          merged.emailConfirmed ??
+          merged.isEmailConfirmed ??
+          false,
       };
-      const norm = normalizeExpiry(payload.expiresAtUtc);
+
+      const norm = normalizeExpiry(payload?.expiresAtUtc);
       state.expiresAtUtc = norm;
-      if (typeof payload.remember === "boolean")
+
+      if (typeof payload?.remember === "boolean") {
         state.remember = payload.remember;
+      }
+
       persistAuth(state);
     },
+
     loadFromStorage: (state) => {
       const parsed = readPersisted();
       if (parsed) {
@@ -80,6 +98,7 @@ const slice = createSlice({
           typeof parsed.remember === "boolean" ? parsed.remember : true;
       }
     },
+
     logout: (state) => {
       state.accessToken = null;
       state.tokenType = null;
@@ -90,8 +109,22 @@ const slice = createSlice({
         sessionStorage.removeItem("auth");
       } catch {}
     },
+
+    // Tiện ích: set đã xác thực email
+    markEmailVerified: (state) => {
+      if (state.user) {
+        state.user.emailVerified = true;
+        persistAuth(state);
+      }
+    },
   },
 });
 
-export const { setCredentials, loadFromStorage, logout } = slice.actions;
+export const { setCredentials, loadFromStorage, logout, markEmailVerified } =
+  slice.actions;
 export default slice.reducer;
+
+// selectors
+export const selectAuth = (s) => s.auth;
+export const selectIsLoggedIn = (s) => !!s.auth.accessToken;
+export const selectIsEmailVerified = (s) => !!s.auth.user?.emailVerified;

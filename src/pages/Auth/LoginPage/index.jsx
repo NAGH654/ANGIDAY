@@ -5,9 +5,11 @@ import { FcGoogle } from "react-icons/fc";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { toast } from "react-toastify";
-
 import { endPoint } from "@routes/router";
-import { useLoginWithUsernameMutation, useLoginWithGoogleMutation } from "@redux/api/Auth/authApi";
+import {
+  useLoginWithUsernameMutation,
+  useLoginWithGoogleMutation,
+} from "@redux/api/Auth/authApi";
 import { useLazyGetMeQuery } from "@redux/api/User/userApi";
 import { setCredentials } from "@redux/features/authSlice";
 import LoadingSpinner from "@components/LoadingSpinner";
@@ -56,7 +58,13 @@ const InputField = ({
   );
 };
 
-const SocialButton = ({ icon: Icon, children, className = "", disabled, onClick }) => (
+const SocialButton = ({
+  icon: Icon,
+  children,
+  className = "",
+  disabled,
+  onClick,
+}) => (
   <button
     type="button"
     onClick={onClick}
@@ -117,7 +125,8 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [login, { isLoading }] = useLoginWithUsernameMutation();
-  const [loginWithGoogle, { isLoading: isGoogleLoading }] = useLoginWithGoogleMutation();
+  const [loginWithGoogle, { isLoading: isGoogleLoading }] =
+    useLoginWithGoogleMutation();
   const [triggerGetMe] = useLazyGetMeQuery();
 
   const [form, setForm] = useState({
@@ -151,8 +160,7 @@ const LoginPage = () => {
         };
         dispatch(setCredentials(safePayload));
         toast.success("Đăng nhập thành công!");
-        
-        
+
         // Fetch role using /User/me then redirect
         try {
           const me = await triggerGetMe().unwrap();
@@ -183,7 +191,7 @@ const LoginPage = () => {
   const handleGoogleLogin = async () => {
     try {
       // Initialize Google Identity Services
-      if (typeof window.google === 'undefined') {
+      if (typeof window.google === "undefined") {
         toast.error("Google OAuth chưa được tải. Vui lòng thử lại sau.");
         return;
       }
@@ -191,12 +199,15 @@ const LoginPage = () => {
       // Get current origin for debugging
       const currentOrigin = window.location.origin;
       const currentUrl = window.location.href;
-      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "1042609021742-tflr2gbgb5c60aktv5r42pf23isocgg8.apps.googleusercontent.com";
-      
+      const clientId =
+        import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+        "1042609021742-tflr2gbgb5c60aktv5r42pf23isocgg8.apps.googleusercontent.com";
 
       // Configure Google OAuth
       window.google.accounts.id.initialize({
-        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || "1042609021742-tflr2gbgb5c60aktv5r42pf23isocgg8.apps.googleusercontent.com",
+        client_id:
+          import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+          "1042609021742-tflr2gbgb5c60aktv5r42pf23isocgg8.apps.googleusercontent.com",
         callback: handleGoogleCallback,
         auto_select: false,
         cancel_on_tap_outside: true,
@@ -206,9 +217,11 @@ const LoginPage = () => {
       window.google.accounts.id.prompt((notification) => {
         if (notification.isNotDisplayed()) {
           const reason = notification.getNotDisplayedReason();
-          
+
           if (reason === "unregistered_origin") {
-            toast.error(`Domain ${currentOrigin} chưa được đăng ký. Vui lòng thêm vào Google Console.`);
+            toast.error(
+              `Domain ${currentOrigin} chưa được đăng ký. Vui lòng thêm vào Google Console.`
+            );
           } else if (reason === "invalid_client") {
             toast.error("Client ID không hợp lệ. Vui lòng kiểm tra cấu hình.");
           } else if (reason === "opt_out_or_no_session") {
@@ -216,7 +229,7 @@ const LoginPage = () => {
           } else {
             toast.error(`Không thể hiển thị Google login. Lý do: ${reason}`);
           }
-          
+
           // Fallback: try renderButton method
           try {
             window.google.accounts.id.renderButton(
@@ -244,7 +257,7 @@ const LoginPage = () => {
   const handleGoogleCallback = async (response) => {
     try {
       const { credential } = response;
-      
+
       if (!credential) {
         toast.error("Không thể lấy thông tin từ Google.");
         return;
@@ -267,8 +280,7 @@ const LoginPage = () => {
         };
         dispatch(setCredentials(safePayload));
         toast.success("Đăng nhập Google thành công!");
-        
-        
+
         // Fetch role using /User/me then redirect
         try {
           const me = await triggerGetMe().unwrap();
@@ -370,8 +382,8 @@ const LoginPage = () => {
       </div>
 
       <div className="flex gap-4">
-        <SocialButton 
-          icon={FcGoogle} 
+        <SocialButton
+          icon={FcGoogle}
           disabled={isLoading || isGoogleLoading}
           onClick={handleGoogleLogin}
         >
@@ -385,21 +397,9 @@ const LoginPage = () => {
           Facebook
         </SocialButton>
       </div>
-      
+
       {/* Hidden div for Google fallback button */}
       <div id="google-signin-button" className="hidden"></div>
-
-      {/* Restaurant Register Button */}
-      <div className="mt-8 text-center">
-        <p className="text-gray-600 mb-4">Bạn là chủ nhà hàng?</p>
-        <Link
-          to={endPoint.RESTAURANT_REGISTER}
-          className="inline-flex items-center justify-center w-full px-6 py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-xl font-medium hover:from-orange-600 hover:to-red-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-all duration-200"
-        >
-          <Building2 className="w-5 h-5 mr-2" />
-          Đăng ký nhà hàng
-        </Link>
-      </div>
     </>
   );
 };

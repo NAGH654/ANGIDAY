@@ -166,13 +166,13 @@ const FoodHomepage = () => {
         
         // Debug for restaurant ID 14
         if (r.id === 14) {
-          console.log("🔍 Restaurant ID 14 Debug:", {
-            id: r.id,
-            name: r.name,
-            imageUrl: r.imageUrl,
-            constructedUrl: primary,
-            storageBase: storageBase
-          });
+          // console.log("🔍 Restaurant ID 14 Debug:", {
+          //   id: r.id,
+          //   name: r.name,
+          //   imageUrl: r.imageUrl,
+          //   constructedUrl: primary,
+          //   storageBase: storageBase
+          // });
         }
       } else {
         // No imageUrl, use Unsplash placeholder

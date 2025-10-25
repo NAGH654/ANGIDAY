@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { useRegisterMutation } from "@redux/api/Auth/authApi";
 import { toast } from "react-toastify";
 import { endPoint } from "@routes/router";
-import LoadingSpinner from "@components/LoadingSpinner"; // ⬅️ import spinner
+import LoadingSpinner from "@components/LoadingSpinner";
 
 const InputField = ({
   type,
@@ -18,7 +18,6 @@ const InputField = ({
 }) => {
   const [show, setShow] = useState(false);
   const inputType = type === "password" && show ? "text" : type;
-
   return (
     <div className="mb-4 relative">
       <input
@@ -82,7 +81,7 @@ const SocialButton = ({ children, icon: Icon, className, disabled }) => (
 
 const today = new Date().toISOString().slice(0, 10);
 
-const RegisterPage = () => {
+export default function RegisterPage() {
   const navigate = useNavigate();
   const [register, { isLoading }] = useRegisterMutation();
 
@@ -121,11 +120,13 @@ const RegisterPage = () => {
         gender: form.gender,
         dateOfBirth: form.dateOfBirth,
       };
-
       const res = await register(payload).unwrap();
       if (res?.isSuccess) {
-        toast.success("Đăng ký tài khoản thành công!");
-        navigate(endPoint.LOGIN, { replace: true });
+        toast.success(
+          "Đăng ký thành công! Vui lòng kiểm tra email để xác thực."
+        );
+        // BE đã gửi email xác thực tự động → chỉ chuyển sang trang hướng dẫn
+        navigate(endPoint.PLEASE_VERIFY(), { replace: true });
       } else {
         toast.error(res?.message || "Đăng ký thất bại");
       }
@@ -172,9 +173,6 @@ const RegisterPage = () => {
             onChange={onChange("gender")}
             disabled={isLoading}
           >
-            <option value="" disabled>
-              Chọn giới tính
-            </option>
             <option value="male">Nam</option>
             <option value="female">Nữ</option>
             <option value="other">Khác</option>
@@ -205,12 +203,7 @@ const RegisterPage = () => {
 
       <AuthButton onClick={handleRegister} disabled={isLoading}>
         {isLoading && (
-          <LoadingSpinner
-            inline
-            size="5"
-            color="white"
-            className="border-4" // override border-3
-          />
+          <LoadingSpinner inline size="5" color="white" className="border-4" />
         )}
         {isLoading ? "Đang tạo tài khoản..." : "Tạo tài khoản"}
         <svg
@@ -249,6 +242,4 @@ const RegisterPage = () => {
       </div>
     </>
   );
-};
-
-export default RegisterPage;
+}

@@ -9,14 +9,19 @@ export const endPoint = {
   AUTH: "/auth",
   LOGIN: "/auth?view=login",
   REGISTER: "/auth?view=register",
+  VERIFY_EMAIL: (token) =>
+    `/auth?view=verify-email${
+      token ? `&token=${encodeURIComponent(token)}` : ""
+    }`,
+  PLEASE_VERIFY: () => `/auth?view=please-verify`,
   RESTAURANT_REGISTER: "/auth?view=restaurant-register",
-  FORGOTPASSWORD:"/auth?view=forgotPassword",
-  ONBOARDING:"/onboarding",
+  FORGOTPASSWORD: "/auth?view=forgotPassword",
+  ONBOARDING: "/onboarding",
   // User profile base and segment for nested paths
   USER_BASE: "/user",
   PROFILE: "profile",
   RESTAURANT_DETAIL: (id = ":id") => `/restaurants/${id}`,
   RESTAURANT_MENU: (id = ":id") => `/restaurants/${id}/menu`,
   RESTAURANT_REVIEWS: (id = ":id") => `/restaurants/${id}/reviews`,
-   RESTAURANT_EDIT:   (id=":id") => `/restaurants/${id}/edit`,
-}
+  RESTAURANT_EDIT: (id = ":id") => `/restaurants/${id}/edit`,
+};
