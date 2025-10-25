@@ -17,7 +17,6 @@ import CardDetailPage from "@pages/CardDetailPage";
 import MenuPage from "@pages/CardDetailPage/MenuPage";
 import ReviewDetailPage from "@pages/CardDetailPage/ReviewDetailPage";
 import EditRestaurantProfilePage from "@pages/Profile/RestaurantProfile/EditRestaurantProfilePage";
-import OnboardingPage from "@pages/Auth/OnboardingModal";
 import UserProfilePage from "@pages/Profile/UserProfile";
 
 function AppRoutes() {
