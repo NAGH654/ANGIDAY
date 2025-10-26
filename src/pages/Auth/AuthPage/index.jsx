@@ -6,7 +6,7 @@ import RegisterPage from "../RegisterPage";
 import RestaurantRegisterPage from "../RestaurantRegisterPage";
 import ForgotPasswordPage from "../ForgotPasswordPage";
 import VerifyEmailPage from "../VerifyEmailPage/verifyEmailPage";
-import PleaseVerifyPage from "../VerifyEmailPage/PleaseVerify";
+import PleaseVerifyPage from "../VerifyEmailPage/pleaseVerify";
 
 const RAW_VIEWS = new Set(["verify-email", "please-verify"]); // ❗️restaurant-register KHÔNG còn raw
 
