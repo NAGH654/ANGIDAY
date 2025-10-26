@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { endPoint } from "@routes/router";
 // Auth wrapper
 import AuthPage from "@pages/Auth/AuthPage";
