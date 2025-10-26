@@ -12,10 +12,11 @@ import {
 import { toast } from "react-toastify";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { useRegisterRestaurantMutation } from "@redux/api/Auth/authApi"; // <-- chỉ còn registerRestaurant
+import { useRegisterRestaurantMutation } from "@redux/api/Auth/authApi"; 
 import { setCredentials } from "@redux/features/authSlice";
 import { endPoint } from "@routes/router";
 import LoadingSpinner from "@components/LoadingSpinner";
+import { ttlStorage } from "@utils/ttlStorage"; 
 
 /* ========== helpers ========== */
 // đồng bộ với LoginPage / RegisterPage
@@ -123,6 +124,8 @@ const AuthButton = ({ children, onClick, disabled }) => (
 );
 
 /* ========== page ========== */
+const EMAIL_TTL_MS = 30 * 1000; // ⏱️ TTL 30 giây
+
 export default function RestaurantRegisterPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -193,11 +196,16 @@ export default function RestaurantRegisterPage() {
       );
 
       if (!emailVerified) {
-        // KHÔNG gọi POST gửi email nữa (BE đã tự gửi) → chỉ điều hướng
+        // BE đã gửi email xác thực tự động → lưu email tạm 30s & điều hướng trang hướng dẫn
+        const email = payload.email.trim();
+        ttlStorage.set("lastRegisterEmail", email, EMAIL_TTL_MS);
         toast.success(
           "Đăng ký thành công! Vui lòng kiểm tra email để xác thực."
         );
-        navigate(endPoint.PLEASE_VERIFY(), { replace: true });
+        const url = `${endPoint.PLEASE_VERIFY()}&email=${encodeURIComponent(
+          email
+        )}`;
+        navigate(url, { replace: true });
         return;
       }
 

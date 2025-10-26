@@ -7,6 +7,7 @@ import { useRegisterMutation } from "@redux/api/Auth/authApi";
 import { toast } from "react-toastify";
 import { endPoint } from "@routes/router";
 import LoadingSpinner from "@components/LoadingSpinner";
+import { ttlStorage } from "@utils/ttlStorage"; // 👈 thêm
 
 const InputField = ({
   type,
@@ -80,6 +81,7 @@ const SocialButton = ({ children, icon: Icon, className, disabled }) => (
 );
 
 const today = new Date().toISOString().slice(0, 10);
+const EMAIL_TTL_MS = 30 * 1000; // TTL 30 giây
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -125,8 +127,14 @@ export default function RegisterPage() {
         toast.success(
           "Đăng ký thành công! Vui lòng kiểm tra email để xác thực."
         );
-        // BE đã gửi email xác thực tự động → chỉ chuyển sang trang hướng dẫn
-        navigate(endPoint.PLEASE_VERIFY(), { replace: true });
+
+        // Lưu email với TTL + truyền query (robust)
+        const email = payload.email.trim();
+        ttlStorage.set("lastRegisterEmail", email, EMAIL_TTL_MS);
+        const url = `${endPoint.PLEASE_VERIFY()}&email=${encodeURIComponent(
+          email
+        )}`;
+        navigate(url, { replace: true });
       } else {
         toast.error(res?.message || "Đăng ký thất bại");
       }
@@ -178,7 +186,6 @@ export default function RegisterPage() {
             <option value="other">Khác</option>
           </select>
         </div>
-
         <div>
           <label className="block text-sm text-gray-600 mb-1">Ngày sinh</label>
           <input
