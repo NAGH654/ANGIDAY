@@ -1,10 +1,4 @@
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  useLocation,
-  Navigate,
-} from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { endPoint } from "@routes/router";
 // Auth wrapper
 import AuthPage from "@pages/Auth/AuthPage";
@@ -27,9 +21,12 @@ import RestaurantProfilePage from "@pages/Profile/RestaurantProfile";
 import EditRestaurantProfilePage from "@pages/Profile/RestaurantProfile/EditRestaurantProfilePage";
 import UserProfilePage from "@pages/Profile/UserProfile";
 
-// test verify email
-import VerifyEmailDemo from "@pages/Auth/VerifyEmailPage/verifyEmailPage";
-import PleaseVerifyPage from "@pages/Auth/VerifyEmailPage/pleaseVerify";
+function VerifyEmailAliasRedirect() {
+  const { search } = useLocation(); // ví dụ "?token=abcd"
+  const p = new URLSearchParams(search);
+  const token = p.get("token") || "";
+  return <Navigate to={endPoint.VERIFY_EMAIL(token)} replace />;
+}
 
 function AppRoutes() {
   return (
@@ -79,10 +76,7 @@ function AppRoutes() {
 
         {/* Auth (login/register/forgot) */}
         <Route path={endPoint.AUTH} element={<AuthPage />} />
-
-        {/* Test verify email page */}
-        <Route path="/auth/verify-demo" element={<VerifyEmailDemo />} />
-        <Route path="/auth/please-verify" element={<PleaseVerifyPage />} />
+        <Route path="/verify-email" element={<VerifyEmailAliasRedirect />} />
 
         {/* 404 fallback */}
         <Route path="*" element={<h1>404 - Page Not Found</h1>} />

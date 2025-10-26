@@ -9,10 +9,13 @@ export const endPoint = {
   AUTH: "/auth",
   LOGIN: "/auth?view=login",
   REGISTER: "/auth?view=register",
-  VERIFY_EMAIL: (token) =>
+  VERIFY_EMAIL: (token = "") =>
     `/auth?view=verify-email${
       token ? `&token=${encodeURIComponent(token)}` : ""
     }`,
+  // alias generator nếu muốn dùng khi build link cũ
+  VERIFY_EMAIL_ALIAS: (token = "") =>
+    `/verify-email${token ? `?token=${encodeURIComponent(token)}` : ""}`,
   PLEASE_VERIFY: () => `/auth?view=please-verify`,
   RESTAURANT_REGISTER: "/auth?view=restaurant-register",
   FORGOTPASSWORD: "/auth?view=forgotPassword",

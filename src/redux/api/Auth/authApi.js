@@ -1,4 +1,4 @@
-// src/redux/api/Auth/authApi.js
+// RTK Query endpoints cho Auth
 import { baseApi } from "../baseApi";
 import { setCredentials } from "../../features/authSlice";
 
@@ -8,6 +8,7 @@ export const authApi = baseApi.injectEndpoints({
       query: (body) => ({ url: "/User/register", method: "POST", body }),
       invalidatesTags: ["Auth"],
     }),
+
     loginWithUsername: build.mutation({
       query: (body) => ({
         url: "/User/login-with-username",
@@ -16,6 +17,7 @@ export const authApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Auth"],
     }),
+
     loginWithGoogle: build.mutation({
       query: (body) => ({
         url: "/User/login-by-google-id-token",
@@ -24,6 +26,7 @@ export const authApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Auth"],
     }),
+
     registerRestaurant: build.mutation({
       query: (body) => ({
         url: "/User/register-restaurant",
@@ -32,6 +35,8 @@ export const authApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Auth"],
     }),
+
+    // Gọi khi người dùng bấm link trong email (GET /User/verify-email?token=...)
     verifyEmail: build.query({
       query: (token) => ({ url: "/User/verify-email", params: { token } }),
       providesTags: ["Auth"],
@@ -40,6 +45,7 @@ export const authApi = baseApi.injectEndpoints({
           const { data } = await queryFulfilled;
           const s = getState();
           const u = s?.auth?.user;
+          // Nếu đã đăng nhập sẵn thì cập nhật cờ emailVerified cho user ở store
           if (u && data?.isSuccess) {
             dispatch(
               setCredentials({
