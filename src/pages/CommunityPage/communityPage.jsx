@@ -7,7 +7,7 @@ import { endPoint } from "@routes/router";
 // Components
 import PostCard from "./components/postCard.jsx";
 import RightSidebar from "./components/rightSideBar.jsx";
-import { topUsers, user } from "./data/data";
+import { user } from "./data/data";
 import {
   useGetMyCommunityPostsQuery,
   useGetBookmarkedPostsQuery,
@@ -17,8 +17,11 @@ import {
   useGetMeQuery,
   useLikePostMutation,
   useUnlikePostMutation,
+  useGetTopUsersByLikesQuery,
+  useGetCommunityStatsQuery,
 } from "@redux/api/User/userApi.js";
 import { BASE_URL } from "@redux/api/baseApi";
+import { resolveImageUrl } from "@utils/imageUrl";
 
 function CommunityPage() {
   const navigate = useNavigate();
@@ -28,6 +31,8 @@ function CommunityPage() {
   const { data: bookmarkedList } = useGetBookmarkedPostsQuery();
   // const { data: likedList } = useGetLikedPostsQuery(); // Disabled until backend implements this endpoint
   const { data: userData, isLoading: userLoading } = useGetMeQuery();
+  const { data: leaderboardData } = useGetTopUsersByLikesQuery(10);
+  const { data: communityStats } = useGetCommunityStatsQuery();
 
   // Helper functions để lấy thông tin user
   const getUserName = () => {
@@ -338,7 +343,44 @@ function CommunityPage() {
           </div>
 
           {/* Right */}
-          <RightSidebar topUsers={topUsers} />
+          <RightSidebar
+            topUsers={useMemo(() => {
+              const list = Array.isArray(leaderboardData)
+                ? leaderboardData
+                : leaderboardData?.data ?? [];
+              const formatCompact = (n) =>
+                typeof n === "number"
+                  ? new Intl.NumberFormat("en", { notation: "compact" }).format(n)
+                  : "0";
+              const badges = ["👑", "🥈", "🥉", "⭐", "⭐"]; // simple badges
+              return (list || []).map((u, idx) => {
+                const avatar = resolveImageUrl(
+                  u?.avatarUrl || "",
+                  BASE_URL
+                ) ||
+                "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=60&h=60&fit=crop&crop=face";
+                return {
+                  name: u?.username || u?.fullName || "Người dùng",
+                  avatar,
+                  badge: badges[idx] || "⭐",
+                  points: formatCompact(u?.totalLikes ?? u?.likes ?? 0),
+                  trend: `+${formatCompact(u?.totalLikes ?? 0)}`,
+                };
+              });
+            }, [leaderboardData])}
+            stats={useMemo(() => {
+              const fmt = (n) =>
+                typeof n === "number"
+                  ? new Intl.NumberFormat("en", { notation: "compact" }).format(n)
+                  : "0";
+              return {
+                members: fmt(communityStats?.totalCustomers ?? 0),
+                posts: fmt(communityStats?.totalPosts ?? 0),
+                reviews: fmt(communityStats?.totalLikes ?? 0),
+                restaurants: fmt(communityStats?.totalRestaurants ?? 0),
+              };
+            }, [communityStats])}
+          />
         </div>
         {/* Comments Modal */}
         {showCommentsForPostId && (

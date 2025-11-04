@@ -1,50 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Mail, CheckCircle, AlertCircle } from "lucide-react";
-import { ttlStorage } from "@utils/ttlStorage"; // 👈 thêm
-
-function buildInboxUrl(email) {
-  if (!email) return "https://mail.google.com"; // fallback
-  const domain = email.split("@")[1]?.toLowerCase() || "";
-
-  // Gmail: Account Chooser + prefill Email
-  if (domain.includes("gmail") || domain.includes("googlemail")) {
-    const cont = encodeURIComponent("https://mail.google.com/mail/");
-    return `https://accounts.google.com/AccountChooser?Email=${encodeURIComponent(
-      email
-    )}&continue=${cont}`;
-  }
-  // Outlook / Hotmail / Live (consumer)
-  if (
-    ["outlook.com", "hotmail.com", "live.com", "msn.com"].some((d) =>
-      domain.endsWith(d)
-    )
-  ) {
-    return "https://outlook.live.com/mail/0/";
-  }
-  // Yahoo
-  if (domain.endsWith("yahoo.com") || domain.endsWith("yahoo.com.vn")) {
-    return "https://mail.yahoo.com/";
-  }
-  // iCloud
-  if (
-    domain.endsWith("icloud.com") ||
-    domain.endsWith("me.com") ||
-    domain.endsWith("mac.com")
-  ) {
-    return "https://www.icloud.com/mail";
-  }
-  // Proton
-  if (domain.endsWith("proton.me") || domain.endsWith("protonmail.com")) {
-    return "https://mail.proton.me/u/0/inbox";
-  }
-  // Zoho
-  if (domain.endsWith("zoho.com") || domain.endsWith("zohomail.com")) {
-    return "https://mail.zoho.com";
-  }
-  // Fallback: thử mail.<domain>
-  return `https://mail.${domain}`;
-}
+import { ttlStorage } from "@utils/ttlStorage";
 
 export default function PleaseVerifyPage() {
   const [mounted, setMounted] = useState(false);
@@ -61,11 +18,6 @@ export default function PleaseVerifyPage() {
       setEmail(saved);
     }
   }, [emailFromQuery]);
-
-  // Khi người dùng bấm "Mở hộp thư..." → dọn email tạm ngay (không để quá lâu)
-  const handleOpenInbox = () => {
-    ttlStorage.remove("lastRegisterEmail");
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50 flex items-center justify-center p-6">
@@ -116,40 +68,30 @@ export default function PleaseVerifyPage() {
                   <span className="font-semibold">Spam / Quảng cáo</span> nếu
                   chưa thấy email.
                 </p>
-
-                <a
-                  href={buildInboxUrl(email)}
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={handleOpenInbox} // 👈 xóa ngay khi dùng
-                  className="mt-4 inline-block w-full text-center bg-gradient-to-r from-pink-500 to-indigo-600 hover:from-pink-600 hover:to-indigo-700 text-white font-medium py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-300"
-                >
-                  Mở hộp thư Gmail
-                </a>
-
-                <div className="mt-3 text-xs text-gray-500">
-                  Không phải email này?
-                  <button
-                    type="button"
-                    className="ml-1 hover:underline hover:brightness-75 text-pink-600"
-                    onClick={() => {
-                      const e = prompt(
-                        "Nhập lại email để mở đúng hộp thư:",
-                        email || ""
-                      );
-                      if (e) {
-                        const v = e.trim();
-                        setEmail(v);
-                        // Cập nhật lại TTL khi user sửa tay (ví dụ 30 giây)
-                        ttlStorage.set("lastRegisterEmail", v, 30 * 1000);
-                      }
-                    }}
-                  >
-                    Thay đổi
-                  </button>
-                </div>
               </div>
             </div>
+          </div>
+
+          <div className="mt-3 text-xs text-gray-500 text-center">
+            Không phải email này?{" "}
+            <button
+              type="button"
+              className="ml-1 hover:underline hover:brightness-75 text-pink-600 font-medium"
+              onClick={() => {
+                const e = prompt(
+                  "Nhập lại email để mở đúng hộp thư:",
+                  email || ""
+                );
+                if (e) {
+                  const v = e.trim();
+                  setEmail(v);
+                  // Cập nhật lại TTL khi user sửa tay (ví dụ 30 giây)
+                  ttlStorage.set("lastRegisterEmail", v, 30 * 1000);
+                }
+              }}
+            >
+              Thay đổi
+            </button>
           </div>
 
           <div className="flex items-center gap-3 my-4">

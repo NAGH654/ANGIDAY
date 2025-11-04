@@ -1,6 +1,5 @@
 import React, { useState } from "react";
-import { User, Lock, Eye, EyeOff, Building2 } from "lucide-react";
-import { FaFacebook } from "react-icons/fa";
+import { User, Lock, Eye, EyeOff } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
@@ -69,7 +68,7 @@ const SocialButton = ({
     type="button"
     onClick={onClick}
     disabled={disabled}
-    className={`w-1/2 flex items-center justify-center py-2.5 border border-gray-300 rounded-lg 
+    className={`w-full flex items-center justify-center py-2.5 border border-gray-300 rounded-lg 
                 text-sm font-semibold text-gray-700 bg-white
                 hover:bg-gray-50 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] 
                 transition-all duration-300 disabled:opacity-60 ${className}`}
@@ -401,22 +400,13 @@ const LoginPage = () => {
         <div className="flex-grow border-t border-gray-300"></div>
       </div>
 
-      <div className="flex gap-4">
-        <SocialButton
-          icon={FcGoogle}
-          disabled={isLoading || isGoogleLoading}
-          onClick={handleGoogleLogin}
-        >
-          {isGoogleLoading ? "Đang đăng nhập..." : "Google"}
-        </SocialButton>
-        <SocialButton
-          icon={() => <FaFacebook className="w-5 h-5 mr-2 text-blue-600" />}
-          className="text-blue-600 hover:bg-blue-50"
-          disabled={isLoading}
-        >
-          Facebook
-        </SocialButton>
-      </div>
+      <SocialButton
+        icon={FcGoogle}
+        disabled={isLoading || isGoogleLoading}
+        onClick={handleGoogleLogin}
+      >
+        {isGoogleLoading ? "Đang đăng nhập..." : "Google"}
+      </SocialButton>
 
       {/* Hidden div for Google fallback button */}
       <div id="google-signin-button" className="hidden"></div>

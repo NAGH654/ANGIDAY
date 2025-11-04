@@ -150,6 +150,43 @@ export const userApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Post", "PostLike"],
     }),
+
+    // Leaderboard: top users by total likes
+    getTopUsersByLikes: build.query({
+      query: (topCount = 10) => ({
+        url: "/Post/top-users-by-likes",
+        params: { topCount },
+      }),
+      transformResponse: (response) => {
+        const payload = Array.isArray(response)
+          ? response
+          : response?.data ?? [];
+        return Array.isArray(payload) ? payload : [payload];
+      },
+      providesTags: ["Auth"],
+    }),
+
+    // Community stats: totals of members, restaurants, posts, likes
+    getCommunityStats: build.query({
+      query: () => ({ url: "/Post/community-stats-report" }),
+      transformResponse: (response) => {
+        const d = response?.data || {};
+        return {
+          totalCustomers: Number(d.totalCustomers) || 0,
+          totalRestaurants: Number(d.totalRestaurants) || 0,
+          totalPosts: Number(d.totalPosts) || 0,
+          totalLikes: Number(d.totalLikes) || 0,
+        };
+      },
+      providesTags: ["Auth"],
+    }),
+
+    // Premium payment info (QR, content, amount, bank info)
+    getPremiumInfo: build.query({
+      query: () => ({ url: "/Payments/premium-info" }),
+      transformResponse: (response) => response?.data || response,
+      providesTags: ["Auth"],
+    }),
   }),
   overrideExisting: false,
 });
@@ -174,4 +211,8 @@ export const {
   useDeletePostMutation,
   useLikePostMutation,
   useUnlikePostMutation,
+  useGetTopUsersByLikesQuery,
+  useGetCommunityStatsQuery,
+  useGetPremiumInfoQuery,
+  useLazyGetPremiumInfoQuery,
 } = userApi;

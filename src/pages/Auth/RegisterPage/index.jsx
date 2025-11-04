@@ -1,13 +1,15 @@
 import React, { useState } from "react";
 import { User, Mail, Lock, Eye, EyeOff } from "lucide-react";
-import { FaFacebook } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
 import { useNavigate } from "react-router-dom";
-import { useRegisterMutation } from "@redux/api/Auth/authApi";
+import { useDispatch } from "react-redux";
+import { useRegisterMutation, useLoginWithGoogleMutation } from "@redux/api/Auth/authApi";
+import { useLazyGetMeQuery } from "@redux/api/User/userApi";
+import { setCredentials } from "@redux/features/authSlice";
 import { toast } from "react-toastify";
 import { endPoint } from "@routes/router";
 import LoadingSpinner from "@components/LoadingSpinner";
-import { ttlStorage } from "@utils/ttlStorage"; // 👈 thêm
+import { ttlStorage } from "@utils/ttlStorage";
 
 const InputField = ({
   type,
@@ -66,11 +68,12 @@ const AuthButton = ({ children, onClick, disabled }) => (
   </button>
 );
 
-const SocialButton = ({ children, icon: Icon, className, disabled }) => (
+const SocialButton = ({ children, icon: Icon, className, disabled, onClick }) => (
   <button
     type="button"
+    onClick={onClick}
     disabled={disabled}
-    className={`w-1/2 flex items-center justify-center py-2.5 border border-gray-300 rounded-lg 
+    className={`w-full flex items-center justify-center py-2.5 border border-gray-300 rounded-lg 
                 text-sm font-semibold text-gray-700 bg-white 
                 hover:bg-gray-50 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] 
                 transition-all duration-300 disabled:opacity-60 ${className}`}
@@ -80,12 +83,44 @@ const SocialButton = ({ children, icon: Icon, className, disabled }) => (
   </button>
 );
 
+// === Helper: make safe expiry no matter backend ===
+function ensureExpiry(tok, expUtc, expiresInSec) {
+  const NOW = Date.now();
+
+  // 1) expUtc hợp lệ & còn >30s
+  if (expUtc) {
+    const t = new Date(expUtc).getTime();
+    if (Number.isFinite(t) && t > NOW + 30_000)
+      return new Date(t).toISOString();
+  }
+
+  // 2) expiresIn giây
+  if (Number.isFinite(expiresInSec) && expiresInSec > 30) {
+    return new Date(NOW + expiresInSec * 1000).toISOString();
+  }
+
+  // 3) JWT exp
+  try {
+    const [, payload] = String(tok || "").split(".");
+    const obj = JSON.parse(atob(payload));
+    const ms = Number(obj?.exp) * 1000;
+    if (Number.isFinite(ms) && ms > NOW + 30_000)
+      return new Date(ms).toISOString();
+  } catch {}
+
+  // 4) Fallback 60 phút
+  return new Date(NOW + 60 * 60 * 1000).toISOString();
+}
+
 const today = new Date().toISOString().slice(0, 10);
 const EMAIL_TTL_MS = 30 * 1000; // TTL 30 giây
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [register, { isLoading }] = useRegisterMutation();
+  const [loginWithGoogle, { isLoading: isGoogleLoading }] = useLoginWithGoogleMutation();
+  const [triggerGetMe] = useLazyGetMeQuery();
 
   const [form, setForm] = useState({
     username: "",
@@ -142,6 +177,120 @@ export default function RegisterPage() {
       const msg = err?.data?.message || "Đăng ký thất bại";
       toast.error(msg);
       console.error("Register error:", err);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      // Initialize Google Identity Services
+      if (typeof window.google === "undefined") {
+        toast.error("Google OAuth chưa được tải. Vui lòng thử lại sau.");
+        return;
+      }
+
+      const clientId =
+        import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+        "1042609021742-tflr2gbgb5c60aktv5r42pf23isocgg8.apps.googleusercontent.com";
+
+      // Configure Google OAuth
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: handleGoogleCallback,
+        auto_select: false,
+        cancel_on_tap_outside: true,
+      });
+
+      // Prompt for Google login
+      window.google.accounts.id.prompt((notification) => {
+        if (notification.isNotDisplayed()) {
+          const reason = notification.getNotDisplayedReason();
+
+          if (reason === "unregistered_origin") {
+            toast.error(
+              `Domain ${window.location.origin} chưa được đăng ký. Vui lòng thêm vào Google Console.`
+            );
+          } else if (reason === "invalid_client") {
+            toast.error("Client ID không hợp lệ. Vui lòng kiểm tra cấu hình.");
+          } else if (reason === "opt_out_or_no_session") {
+            toast.error("Người dùng đã từ chối hoặc không có session.");
+          } else {
+            toast.error(`Không thể hiển thị Google login. Lý do: ${reason}`);
+          }
+
+          // Fallback: try renderButton method
+          try {
+            window.google.accounts.id.renderButton(
+              document.getElementById("google-signin-button-register"),
+              {
+                theme: "outline",
+                size: "large",
+                text: "signin_with",
+                shape: "rectangular",
+                logo_alignment: "left",
+              }
+            );
+          } catch (fallbackError) {
+            // Fallback failed
+          }
+        } else if (notification.isSkippedMoment()) {
+          toast.error("Google login bị bỏ qua. Vui lòng thử lại.");
+        }
+      });
+    } catch (error) {
+      toast.error("Không thể đăng nhập với Google. Vui lòng thử lại.");
+    }
+  };
+
+  const handleGoogleCallback = async (response) => {
+    try {
+      const { credential } = response;
+
+      if (!credential) {
+        toast.error("Không thể lấy thông tin từ Google.");
+        return;
+      }
+
+      // Call backend API with Google ID token
+      const res = await loginWithGoogle({
+        idToken: credential,
+      }).unwrap();
+
+      const raw = res?.data ?? res;
+      const token = raw?.accessToken || raw?.token;
+
+      if (token) {
+        const safePayload = {
+          ...raw,
+          accessToken: token,
+          expiresAtUtc: ensureExpiry(token, raw?.expiresAtUtc, raw?.expiresIn),
+          remember: true, // Google login always remember
+        };
+        dispatch(setCredentials(safePayload));
+        toast.success("Đăng nhập Google thành công!");
+
+        // Fetch role using /User/me then redirect
+        try {
+          const me = await triggerGetMe().unwrap();
+          const role = me?.roleName || me?.role;
+          if (role === "restaurant owner") {
+            navigate("/restaurant/profile", { replace: true });
+          } else {
+            navigate("/", { replace: true });
+          }
+        } catch (e) {
+          navigate("/", { replace: true });
+        }
+      } else {
+        toast.error(res?.message || "Đăng nhập Google thất bại");
+      }
+    } catch (err) {
+      const msg =
+        err?.data?.message ||
+        err?.error ||
+        err?.message ||
+        "Đăng nhập Google thất bại";
+      console.error("Google login error:", err);
+      toast.error(msg);
     }
   };
 
@@ -235,18 +384,16 @@ export default function RegisterPage() {
         <div className="flex-grow border-t border-gray-300"></div>
       </div>
 
-      <div className="flex gap-4">
-        <SocialButton icon={FcGoogle} disabled={isLoading}>
-          Google
-        </SocialButton>
-        <SocialButton
-          icon={() => <FaFacebook className="w-5 h-5 mr-2 text-blue-600" />}
-          className="text-blue-600 hover:bg-blue-50"
-          disabled={isLoading}
-        >
-          Facebook
-        </SocialButton>
-      </div>
+      <SocialButton 
+        icon={FcGoogle} 
+        disabled={isLoading || isGoogleLoading}
+        onClick={handleGoogleLogin}
+      >
+        {isGoogleLoading ? "Đang đăng nhập..." : "Google"}
+      </SocialButton>
+
+      {/* Hidden div for Google fallback button */}
+      <div id="google-signin-button-register" className="hidden"></div>
     </>
   );
 }

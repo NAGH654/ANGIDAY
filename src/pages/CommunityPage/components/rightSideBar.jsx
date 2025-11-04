@@ -1,7 +1,7 @@
 import React from "react";
 import { Award, TrendingUp, Zap } from "lucide-react";
 
-const RightSidebar = ({ topUsers = [] }) => {
+const RightSidebar = ({ topUsers = [], stats }) => {
   return (
     <aside className="w-[360px] hidden xl:block space-y-7">
       {/* Leaderboard */}
@@ -34,6 +34,12 @@ const RightSidebar = ({ topUsers = [] }) => {
                       src={u.avatar}
                       alt={u.name}
                       className="w-11 h-11 rounded-full object-cover border border-white shadow"
+                      referrerPolicy="no-referrer"
+                      loading="lazy"
+                      onError={(e) => {
+                        e.currentTarget.src =
+                          "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=60&h=60&fit=crop&crop=face";
+                      }}
                     />
                     <span className="absolute -top-1 -right-1 w-5 h-5 bg-white rounded-full flex items-center justify-center text-xs shadow">
                       {u.badge}
@@ -101,19 +107,19 @@ const RightSidebar = ({ topUsers = [] }) => {
         </h3>
         <div className="grid grid-cols-2 gap-4">
           <div className="text-center p-4 bg-gradient-to-br from-pink-50 to-purple-50 rounded-xl">
-            <div className="text-2xl font-bold text-pink-600 mb-1">12.5k</div>
+            <div className="text-2xl font-bold text-pink-600 mb-1">{stats?.members ?? "-"}</div>
             <div className="text-xs text-gray-600">Thành viên</div>
           </div>
           <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl">
-            <div className="text-2xl font-bold text-blue-600 mb-1">8.9k</div>
+            <div className="text-2xl font-bold text-blue-600 mb-1">{stats?.posts ?? "-"}</div>
             <div className="text-xs text-gray-600">Bài viết</div>
           </div>
           <div className="text-center p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl">
-            <div className="text-2xl font-bold text-green-600 mb-1">45.2k</div>
-            <div className="text-xs text-gray-600">Đánh giá</div>
+            <div className="text-2xl font-bold text-green-600 mb-1">{stats?.reviews ?? "-"}</div>
+            <div className="text-xs text-gray-600">Lượt thích</div>
           </div>
           <div className="text-center p-4 bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl">
-            <div className="text-2xl font-bold text-orange-600 mb-1">2.1k</div>
+            <div className="text-2xl font-bold text-orange-600 mb-1">{stats?.restaurants ?? "-"}</div>
             <div className="text-xs text-gray-600">Nhà hàng</div>
           </div>
         </div>
