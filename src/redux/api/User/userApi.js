@@ -187,6 +187,16 @@ export const userApi = baseApi.injectEndpoints({
       transformResponse: (response) => response?.data || response,
       providesTags: ["Auth"],
     }),
+
+    // User's selected tags
+    getUserSelectedTags: build.query({
+      query: () => ({ url: "/UserTag/user-tag" }),
+      transformResponse: (response) => {
+        const payload = Array.isArray(response) ? response : response?.data ?? [];
+        return Array.isArray(payload) ? payload : [payload];
+      },
+      providesTags: ["Auth"],
+    }),
   }),
   overrideExisting: false,
 });
@@ -215,4 +225,6 @@ export const {
   useGetCommunityStatsQuery,
   useGetPremiumInfoQuery,
   useLazyGetPremiumInfoQuery,
+  useGetUserSelectedTagsQuery,
+  useLazyGetUserSelectedTagsQuery,
 } = userApi;

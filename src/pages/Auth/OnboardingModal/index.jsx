@@ -1,7 +1,7 @@
 // src/pages/Onboarding/OnboardingModal.jsx
 import React, { useMemo, useState, useEffect } from "react";
 import { X, Check } from "lucide-react";
-import { useGetTagsQuery, useChooseTagsMutation } from "@redux/api/Tag/tagApi";
+import { useGetTagsQuery, useChooseTagsMutation, useGetMyTagsQuery } from "@redux/api/Tag/tagApi";
 import { markOnboardingDone } from "@utils/onboarding";
 import { toast } from "react-toastify";
 import { motion } from "framer-motion";
@@ -81,11 +81,15 @@ function Tile({ selected, label, emoji, onClick, disabled }) {
   );
 }
 
-export default function OnboardingModal({ open, onClose, userId }) {
+export default function OnboardingModal({ open, onClose, userId, forceComplete = true }) {
   const { data, isFetching, isError, refetch } = useGetTagsQuery(undefined, {
     skip: !open,
   });
   const [chooseTags, { isLoading: saving }] = useChooseTagsMutation();
+  // Preload user's current tags when editing from profile
+  const { data: myTagsData } = useGetMyTagsQuery(undefined, {
+    skip: !open || forceComplete,
+  });
 
   // lưu key đã chọn (key = name chuẩn hoá)
   const [picked, setPicked] = useState(() => new Set());
@@ -102,13 +106,18 @@ export default function OnboardingModal({ open, onClose, userId }) {
     { name: "Food Characteristics", minTags: 3 },
   ];
 
-  // đóng bằng ESC
+  // ESC handling: lock when forceComplete, otherwise allow onClose
   useEffect(() => {
     if (!open) return;
-    const onKey = (e) => e.key === "Escape" && onClose?.();
+    const onKey = (e) => {
+      if (e.key === "Escape") {
+        if (forceComplete) e.preventDefault();
+        else onClose?.();
+      }
+    };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open, forceComplete, onClose]);
 
   const tagsByCategory = useMemo(() => {
     const arr = data?.data ?? [];
@@ -139,6 +148,19 @@ export default function OnboardingModal({ open, onClose, userId }) {
     Object.values(tagsByCategory).flat().forEach((t) => map.set(t.key, t));
     return map;
   }, [tagsByCategory]);
+
+  // Initialize picked tags from user's current selections in edit mode
+  useEffect(() => {
+    if (!forceComplete && myTagsData) {
+      const list = Array.isArray(myTagsData) ? myTagsData : myTagsData?.data || [];
+      const init = new Set(
+        list
+          .map((it) => toKey(it?.tagName || it?.name))
+          .filter(Boolean)
+      );
+      setPicked(init);
+    }
+  }, [forceComplete, myTagsData]);
 
   // Lấy current category
   const currentCategory = categoryOrder[currentCategoryIndex];
@@ -210,10 +232,7 @@ export default function OnboardingModal({ open, onClose, userId }) {
   return (
     <div className="fixed inset-0 z-[1000]">
       {/* overlay */}
-      <div
-        className="absolute inset-0 bg-black/35 backdrop-blur-[1px]"
-        onClick={onClose}
-      />
+      <div className="absolute inset-0 bg-black/35 backdrop-blur-[1px]" onClick={forceComplete ? undefined : onClose} />
 
       {/* panel */}
       <div className="absolute inset-0 p-4 flex items-start md:items-center justify-center">
@@ -223,16 +242,18 @@ export default function OnboardingModal({ open, onClose, userId }) {
           role="dialog"
           aria-modal="true"
         >
-          {/* nút đóng */}
-          <motion.button
-            whileHover={{ rotate: 90 }}
-            transition={{ type: "spring", stiffness: 500, damping: 18 }}
-            className="absolute right-4 top-4 w-9 h-9 rounded-md hover:bg-gray-100 flex items-center justify-center"
-            onClick={onClose}
-            aria-label="Đóng"
-          >
-            <X className="w-5 h-5" />
-          </motion.button>
+          {/* Close button: show only when editing from profile */}
+          {!forceComplete && (
+            <motion.button
+              whileHover={{ rotate: 90 }}
+              transition={{ type: "spring", stiffness: 500, damping: 18 }}
+              className="absolute right-4 top-4 w-9 h-9 rounded-md hover:bg-gray-100 flex items-center justify-center"
+              onClick={onClose}
+              aria-label="Đóng"
+            >
+              <X className="w-5 h-5" />
+            </motion.button>
+          )}
 
           {/* header */}
           <div className="px-6 pt-6 pb-3 border-b border-gray-100">
@@ -265,6 +286,20 @@ export default function OnboardingModal({ open, onClose, userId }) {
             <div className="text-center text-sm text-pink-600 font-medium">
               Đã chọn: {currentCategoryPicked.length}/{currentCategory?.minTags}
             </div>
+            {!forceComplete && (
+              <div className="mt-3 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-xl px-4 py-3 text-sm">
+                <p className="mb-2 font-medium">Ghi chú:</p>
+                <p className="mb-2">Chọn thêm để bật tag, nhấp lại một tag đã chọn để bỏ tag.</p>
+                <div className="flex flex-wrap gap-2">
+                  {Array.from(picked).map((k) => (
+                    <span key={k} className="px-2.5 py-1 rounded-full bg-pink-100 text-pink-700 border border-pink-200">
+                      {byKey.get(k)?.label || `#${k}`}
+                    </span>
+                  ))}
+                  {picked.size === 0 && <span className="text-yellow-700">Chưa có tag nào được chọn</span>}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* body */}

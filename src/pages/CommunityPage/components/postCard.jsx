@@ -60,7 +60,7 @@ const PostCard = ({ post, onLike, onSave, onShowComments }) => {
         <h2 className="text-xl font-bold text-gray-900 mt-3 mb-2 group-hover:text-pink-600 transition-colors">
           {post.title}
         </h2>
-        <p className="text-gray-700 text-base leading-relaxed">
+        <p className="text-gray-700 text-base leading-relaxed whitespace-pre-wrap break-words">
           {post.content}
         </p>
 
