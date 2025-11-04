@@ -10,35 +10,11 @@ import {
   FileText,
 } from "lucide-react";
 import { toast } from "react-toastify";
-import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { useRegisterRestaurantMutation } from "@redux/api/Auth/authApi"; 
-import { setCredentials } from "@redux/features/authSlice";
 import { endPoint } from "@routes/router";
 import LoadingSpinner from "@components/LoadingSpinner";
-import { ttlStorage } from "@utils/ttlStorage"; 
-
-/* ========== helpers ========== */
-// đồng bộ với LoginPage / RegisterPage
-function ensureExpiry(tok, expUtc, expiresInSec) {
-  const NOW = Date.now();
-  if (expUtc) {
-    const t = new Date(expUtc).getTime();
-    if (Number.isFinite(t) && t > NOW + 30_000)
-      return new Date(t).toISOString();
-  }
-  if (Number.isFinite(expiresInSec) && expiresInSec > 30) {
-    return new Date(NOW + expiresInSec * 1000).toISOString();
-  }
-  try {
-    const [, payload] = String(tok || "").split(".");
-    const obj = JSON.parse(atob(payload));
-    const ms = Number(obj?.exp) * 1000;
-    if (Number.isFinite(ms) && ms > NOW + 30_000)
-      return new Date(ms).toISOString();
-  } catch {}
-  return new Date(NOW + 60 * 60 * 1000).toISOString(); // fallback 60 phút
-}
+import { ttlStorage } from "@utils/ttlStorage";
 
 /* ========== shared UI (đồng bộ với RegisterPage) ========== */
 const InputField = ({
@@ -127,7 +103,6 @@ const AuthButton = ({ children, onClick, disabled }) => (
 const EMAIL_TTL_MS = 30 * 1000; // ⏱️ TTL 30 giây
 
 export default function RestaurantRegisterPage() {
-  const dispatch = useDispatch();
   const navigate = useNavigate();
   const [registerRestaurant, { isLoading }] = useRegisterRestaurantMutation();
 
@@ -172,45 +147,22 @@ export default function RestaurantRegisterPage() {
       };
 
       const res = await registerRestaurant(payload).unwrap();
-      const raw = res?.data ?? res;
-      const token = raw?.accessToken || raw?.token;
-      const emailVerified =
-        raw?.emailVerified ??
-        raw?.data?.emailVerified ??
-        raw?.user?.emailVerified ??
-        false;
-
-      if (!token) {
-        toast.error(res?.message || "Đăng ký thất bại");
-        return;
-      }
-
-      // Lưu phiên (nếu BE đã trả token)
-      dispatch(
-        setCredentials({
-          ...raw,
-          accessToken: token,
-          expiresAtUtc: ensureExpiry(token, raw?.expiresAtUtc, raw?.expiresIn),
-          remember: true,
-        })
-      );
-
-      if (!emailVerified) {
-        // BE đã gửi email xác thực tự động → lưu email tạm 30s & điều hướng trang hướng dẫn
-        const email = payload.email.trim();
-        ttlStorage.set("lastRegisterEmail", email, EMAIL_TTL_MS);
+      
+      if (res?.isSuccess) {
         toast.success(
           "Đăng ký thành công! Vui lòng kiểm tra email để xác thực."
         );
+
+        // Lưu email với TTL + truyền query (giống RegisterPage)
+        const email = payload.email.trim();
+        ttlStorage.set("lastRegisterEmail", email, EMAIL_TTL_MS);
         const url = `${endPoint.PLEASE_VERIFY()}&email=${encodeURIComponent(
           email
         )}`;
         navigate(url, { replace: true });
-        return;
+      } else {
+        toast.error(res?.message || "Đăng ký thất bại");
       }
-
-      toast.success("Đăng ký nhà hàng thành công!");
-      navigate("/restaurant/profile", { replace: true });
     } catch (err) {
       const msg =
         err?.data?.message || err?.error || err?.message || "Đăng ký thất bại";
