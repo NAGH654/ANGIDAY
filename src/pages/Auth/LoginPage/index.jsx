@@ -178,13 +178,33 @@ const LoginPage = () => {
         toast.error(res?.message || "Đăng nhập thất bại");
       }
     } catch (err) {
-      const msg =
+      const errorMsg =
         err?.data?.message ||
         err?.error ||
         err?.message ||
         "Đăng nhập thất bại";
+      
+      // Check if error is related to email verification or unauthorized
+      const lowerMsg = String(errorMsg).toLowerCase();
+      const isUnauthorized = err?.status === 401 || 
+                            err?.data?.status === 401 ||
+                            lowerMsg.includes("unauthorized");
+      const mentionsEmail = lowerMsg.includes("email") || 
+                           lowerMsg.includes("verify") || 
+                           lowerMsg.includes("xác thực");
+      
       console.error("Login error:", err);
-      toast.error(msg);
+      
+      // If unauthorized and might be related to email verification, show helpful message
+      // Common case: User just registered but hasn't verified email yet
+      if (isUnauthorized) {
+        const helpfulMsg = mentionsEmail 
+          ? "Email chưa được xác thực. Vui lòng kiểm tra email và click vào link xác thực trước khi đăng nhập."
+          : "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin đăng nhập hoặc email xác thực.";
+        toast.error(helpfulMsg);
+      } else {
+        toast.error(errorMsg);
+      }
     }
   };
 
