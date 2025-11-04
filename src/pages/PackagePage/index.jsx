@@ -16,6 +16,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import CustomerSideBar from "@layout/SideBar";
+import { useLazyGetPremiumInfoQuery } from "@redux/api/User/userApi";
 
 function PackagePage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -23,6 +24,9 @@ function PackagePage() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [animateCards, setAnimateCards] = useState(false);
+  const [premiumInfo, setPremiumInfo] = useState(null);
+  const [triggerPremiumInfo, { isFetching: isFetchingPremium }] =
+    useLazyGetPremiumInfoQuery();
 
   // Animate cards on mount
   useEffect(() => {
@@ -141,6 +145,11 @@ function PackagePage() {
   const handleSelectPackage = (pkg) => {
     setSelectedPackage(pkg);
     setShowPaymentModal(true);
+    // Fetch premium payment info immediately when opening modal
+    triggerPremiumInfo()
+      .unwrap()
+      .then((data) => setPremiumInfo(data))
+      .catch(() => setPremiumInfo(null));
   };
 
   const handlePayment = async () => {
@@ -450,74 +459,51 @@ function PackagePage() {
                 </div>
               </div>
 
-              {/* Payment Methods */}
+              {/* Payment Methods (simplified: only bank transfer via QR) */}
               <div className="px-8 pb-6">
                 <h4 className="font-semibold text-gray-900 mb-4">
-                  Phương thức thanh toán
+                  Thông tin thanh toán
                 </h4>
-                <div className="space-y-3">
-                  {paymentMethods.map((method) => (
-                    <label
-                      key={method.id}
-                      className={`relative flex items-center space-x-4 p-4 border-2 rounded-2xl cursor-pointer transition-all duration-200 hover:shadow-lg ${
-                        selectedPaymentMethod === method.id
-                          ? `border-${method.color}-400 bg-${method.color}-50/50 shadow-md`
-                          : "border-gray-200 hover:border-gray-300 bg-white/60"
-                      }`}
-                    >
-                      {method.popular && (
-                        <div className="absolute -top-2 left-4 bg-blue-500 text-white px-2 py-1 rounded-full text-xs font-bold">
-                          Phổ biến
+
+                {/* Premium info (bank transfer/QR) */}
+                <div className="mb-5 rounded-2xl border border-gray-200 p-4 bg-white/70">
+                  <div className="flex items-start gap-4">
+                    <div className="w-28 h-28 rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center">
+                      {isFetchingPremium ? (
+                        <div className="animate-pulse w-8 h-8 rounded-full bg-gray-300" />
+                      ) : premiumInfo?.qrCodeUrl ? (
+                        <img
+                          src={premiumInfo.qrCodeUrl}
+                          alt="QR thanh toán"
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="text-xs text-gray-500 px-2 text-center">
+                          QR sẽ hiển thị sau
                         </div>
                       )}
-
-                      <input
-                        type="radio"
-                        name="paymentMethod"
-                        value={method.id}
-                        checked={selectedPaymentMethod === method.id}
-                        onChange={(e) =>
-                          setSelectedPaymentMethod(e.target.value)
-                        }
-                        className="sr-only"
-                      />
-
-                      <div className="flex-shrink-0">{method.icon}</div>
-
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-gray-900">
-                          {method.name}
-                        </h4>
-                        <p className="text-sm text-gray-500">
-                          {method.description}
-                        </p>
-
-                        {(method.discount || method.cashback) && (
-                          <div className="mt-2">
-                            {method.discount && (
-                              <span className="inline-flex items-center space-x-1 bg-pink-100 text-pink-700 px-2 py-1 rounded-full text-xs font-medium">
-                                <Gift size={12} />
-                                <span>Giảm {method.discount}</span>
-                              </span>
-                            )}
-                            {method.cashback && (
-                              <span className="inline-flex items-center space-x-1 bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs font-medium">
-                                <Star size={12} />
-                                <span>Hoàn {method.cashback}</span>
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      {selectedPaymentMethod === method.id && (
-                        <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                          <Check size={12} className="text-white" />
-                        </div>
-                      )}
-                    </label>
-                  ))}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-700 mb-1">
+                        Nội dung CK: <span className="font-semibold">{premiumInfo?.paymentContent || "--"}</span>
+                      </p>
+                      <p className="text-sm text-gray-700 mb-1">
+                        Số tiền: <span className="font-semibold">{premiumInfo?.amountVnd || "--"} VND</span>
+                      </p>
+                      <p className="text-sm text-gray-700 mb-1">
+                        Ngân hàng: <span className="font-semibold">{premiumInfo?.bankName || "--"}</span>
+                      </p>
+                      <p className="text-sm text-gray-700">
+                        STK: <span className="font-semibold">{premiumInfo?.accountNumber || "--"}</span> - {premiumInfo?.accountName || ""}
+                      </p>
+                    </div>
+                  </div>
                 </div>
+
+                {/* Đã bỏ 3 lựa chọn ví/thẻ. Chỉ hiển thị thông tin chuyển khoản qua QR */}
+                <p className="text-sm text-gray-500">Vui lòng quét QR hoặc chuyển khoản theo thông tin hiển thị ở trên.</p>
               </div>
 
               {/* Terms */}
@@ -535,34 +521,13 @@ function PackagePage() {
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex space-x-4 p-8 pt-0">
+              {/* Action Buttons (only back) */}
+              <div className="p-8 pt-0">
                 <button
                   onClick={() => setShowPaymentModal(false)}
-                  className="flex-1 py-3 border-2 border-gray-200 text-gray-700 rounded-2xl font-semibold hover:bg-gray-50 transition-colors"
+                  className="w-full py-3 border-2 border-gray-200 text-gray-700 rounded-2xl font-semibold hover:bg-gray-50 transition-colors"
                 >
                   Quay lại
-                </button>
-                <button
-                  onClick={handlePayment}
-                  disabled={!selectedPaymentMethod || isLoading}
-                  className={`flex-1 py-3 rounded-2xl font-semibold text-white transition-all duration-200 flex items-center justify-center space-x-2 ${
-                    selectedPaymentMethod && !isLoading
-                      ? "bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 hover:shadow-lg hover:-translate-y-0.5"
-                      : "bg-gray-300 cursor-not-allowed"
-                  }`}
-                >
-                  {isLoading ? (
-                    <>
-                      <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full"></div>
-                      <span>Đang xử lý...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>Thanh toán ngay</span>
-                      <Zap size={16} />
-                    </>
-                  )}
                 </button>
               </div>
             </div>
