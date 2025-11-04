@@ -19,15 +19,17 @@ import {
   Image as ImageIcon,
   Star,
   Trash2,
-  Loader2
+  Loader2,
+  Tags
 } from "lucide-react";
 import CustomerSideBar from "@layout/SideBar";
-import { useGetMeQuery, useUpdateProfileMutation, useUpdateAvatarMutation, useGetMyCommunityPostsQuery, useGetUserCommunityPostsQuery, useGetMyReviewsQuery, useDeletePostMutation } from "@redux/api/User/userApi";
+import { useGetMeQuery, useUpdateProfileMutation, useUpdateAvatarMutation, useGetMyCommunityPostsQuery, useGetUserCommunityPostsQuery, useGetMyReviewsQuery, useDeletePostMutation, useLazyGetUserSelectedTagsQuery } from "@redux/api/User/userApi";
 import { BASE_URL } from "@redux/api/baseApi";
 import { useDispatch } from "react-redux";
 import { endPoint } from "@routes/router";
 import { cleanLogout } from "@utils/cleanLogout";
 import toast from "react-hot-toast";
+import OnboardingModal from "@pages/Auth/OnboardingModal";
 // remove presign/direct upload usage
 
 function stripTrailingApi(url) {
@@ -81,6 +83,9 @@ function UserProfile() {
   const [deleteItem, setDeleteItem] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [showTagsModal, setShowTagsModal] = useState(false);
+  const [showEditTagsModal, setShowEditTagsModal] = useState(false);
+  const [triggerGetUserTags, { data: userTagsData, isFetching: isFetchingUserTags }] = useLazyGetUserSelectedTagsQuery();
 
   // Close dropdown when clicking outside
   React.useEffect(() => {
@@ -523,8 +528,12 @@ function UserProfile() {
                         <Edit size={18} />
                         <span>Chỉnh sửa</span>
                       </button>
-                      <button className="px-4 py-3 rounded-2xl bg-gradient-to-r from-pink-500 to-purple-600 text-white hover:shadow-xl hover:scale-105 transition-all duration-200">
-                        <Sparkles size={18} />
+                      <button
+                        onClick={() => { setShowTagsModal(true); triggerGetUserTags(); }}
+                        className="px-4 py-3 rounded-2xl bg-gradient-to-r from-pink-500 to-purple-600 text-white hover:shadow-xl hover:scale-105 transition-all duration-200 inline-flex items-center gap-2"
+                      >
+                        <Tags size={18} />
+                        <span>Tag đã chọn</span>
                 </button>
               </div>
                   </div>
@@ -967,6 +976,59 @@ function UserProfile() {
         </div>
       )}
 
+      {/* Selected Tags Modal */}
+      {showTagsModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowTagsModal(false)}>
+          <div className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl relative" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-6 border-b border-gray-100">
+              <h3 className="text-xl font-bold text-gray-900">Sở thích đã chọn</h3>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => { setShowTagsModal(false); setShowEditTagsModal(true); }}
+                  className="px-3 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-medium hover:shadow"
+                >
+                  Chỉnh sửa tag
+                </button>
+                <button onClick={() => setShowTagsModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+            <div className="p-6">
+              {isFetchingUserTags ? (
+                <div className="py-8 text-center text-gray-500">Đang tải...</div>
+              ) : (
+                <div className="space-y-5">
+                  {(() => {
+                    const list = Array.isArray(userTagsData) ? userTagsData : userTagsData?.data || [];
+                    const grouped = list.reduce((acc, it) => {
+                      const cat = it.categoryName || "Khác";
+                      if (!acc[cat]) acc[cat] = [];
+                      acc[cat].push(it);
+                      return acc;
+                    }, {});
+                    const entries = Object.entries(grouped);
+                    if (entries.length === 0) return <div className="text-gray-500">Chưa có tag nào.</div>;
+                    return entries.map(([cat, arr]) => (
+                      <div key={cat}>
+                        <div className="text-sm font-semibold text-gray-700 mb-2">{cat}</div>
+                        <div className="flex flex-wrap gap-2">
+                          {arr.map((t) => (
+                            <span key={t.tagId} className="px-3 py-1 rounded-full bg-pink-50 text-pink-700 border border-pink-200 text-sm">
+                              #{String(t.tagName || "").replace(/^#/, "")}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Custom Delete Confirmation Modal */}
       {showDeleteModal && (
         <div 
@@ -1036,6 +1098,11 @@ function UserProfile() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Edit Tags Modal (reuses Onboarding flow with validation) */}
+      {showEditTagsModal && (
+        <OnboardingModal open={showEditTagsModal} onClose={() => setShowEditTagsModal(false)} userId={me?.id} forceComplete={false} />
       )}
     </div>
   );

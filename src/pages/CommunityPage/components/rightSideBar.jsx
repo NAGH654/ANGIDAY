@@ -67,38 +67,7 @@ const RightSidebar = ({ topUsers = [], stats }) => {
         </div>
       </div>
 
-      {/* Trending */}
-      <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow border border-white/60 p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-base font-bold text-gray-900">Xu hướng</h3>
-          <TrendingUp size={18} className="text-pink-500" />
-        </div>
-        <div className="space-y-3">
-          {[
-            { tag: "#QuanAn", posts: "1.2k bài viết", trend: "+15%" },
-            { tag: "#BanhMi", posts: "856 bài viết", trend: "+8%" },
-            { tag: "#Pho", posts: "643 bài viết", trend: "+12%" },
-            { tag: "#CongThuc", posts: "534 bài viết", trend: "+5%" },
-            { tag: "#Review", posts: "423 bài viết", trend: "+18%" },
-          ].map((it, idx) => (
-            <div
-              key={idx}
-              className="flex items-center justify-between p-3.5 bg-gray-50 rounded-lg hover:bg-gray-100 transition cursor-pointer"
-            >
-              <div>
-                <p className="font-semibold text-gray-900 text-sm">{it.tag}</p>
-                <p className="text-xs text-gray-500">{it.posts}</p>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-green-600 text-xs font-semibold">
-                  {it.trend}
-                </span>
-                <Zap size={14} className="text-green-600" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* Trending removed as requested */}
 
       {/* Stats */}
       <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow border border-white/60 p-5">

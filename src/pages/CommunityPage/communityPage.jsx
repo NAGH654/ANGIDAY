@@ -22,6 +22,48 @@ import {
 } from "@redux/api/User/userApi.js";
 import { BASE_URL } from "@redux/api/baseApi";
 import { resolveImageUrl } from "@utils/imageUrl";
+import { useSelector } from "react-redux";
+ 
+function CommentNode({ c, onReply, level = 0 }) {
+  const [expanded, setExpanded] = React.useState(false);
+  const avatar = resolveImageUrl(c?.avatarUrl || "", BASE_URL);
+  return (
+    <div className={`pl-${Math.min(level,3)*4} py-2`}>
+      <div className="rounded-xl bg-gray-100 p-3">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-2">
+            {avatar ? (
+              <img src={avatar} alt="avatar" className="w-7 h-7 rounded-full object-cover" referrerPolicy="no-referrer" />
+            ) : (
+              <div className="w-7 h-7 rounded-full bg-pink-500 text-white text-xs flex items-center justify-center">
+                {(c.fullname || c.fullName || "U").charAt(0)}
+              </div>
+            )}
+            <p className="font-semibold text-pink-700">{c.fullname || c.fullName || c.username || "Người dùng"}</p>
+          </div>
+          <button className="text-xs text-blue-600" onClick={()=> onReply?.(c.id, c.fullname || c.fullName || c.username || "")}>Phản hồi</button>
+        </div>
+        <p className="text-gray-700 leading-relaxed">{c.content}</p>
+        <p className="text-xs text-gray-500 mt-1">{c.createdAt ? new Date(c.createdAt).toLocaleString() : ""}</p>
+      </div>
+      {Array.isArray(c.children) && c.children.length > 0 && (
+        <div className="mt-1 ml-2">
+          {!expanded ? (
+            <button className="text-xs text-blue-600" onClick={()=> setExpanded(true)}>
+              Xem {c.children.length} phản hồi
+            </button>
+          ) : (
+            <div className="mt-2 space-y-2">
+              {c.children.map((child) => (
+                <CommentNode key={child.id} c={child} onReply={onReply} level={level+1} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function CommunityPage() {
   const navigate = useNavigate();
@@ -33,6 +75,7 @@ function CommunityPage() {
   const { data: userData, isLoading: userLoading } = useGetMeQuery();
   const { data: leaderboardData } = useGetTopUsersByLikesQuery(10);
   const { data: communityStats } = useGetCommunityStatsQuery();
+  const accessToken = useSelector((s) => s?.auth?.accessToken);
 
   // Helper functions để lấy thông tin user
   const getUserName = () => {
@@ -72,10 +115,12 @@ function CommunityPage() {
       const mappedPost = {
         id: p.id ?? p.postId ?? idx + 1000,
         author: {
-          name: p.username || "Bạn",
-          avatar: p.userAvatar 
-            ? `${BASE_URL}/Storage/view?key=${p.userAvatar}`
-            : "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=60&h=60&fit=crop&crop=face",
+          name: p.username || p.fullName || "Bạn",
+          avatar: (() => {
+            const raw = p.userAvatar || p.avatarUrl || "";
+            const url = resolveImageUrl(raw, BASE_URL);
+            return url || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=60&h=60&fit=crop&crop=face";
+          })(),
           time: p.createdAt ? new Date(p.createdAt).toLocaleString() : "",
           verified: false,
           location: "",
@@ -106,13 +151,28 @@ function CommunityPage() {
   const [showCommentsForPostId, setShowCommentsForPostId] = useState(null);
   const [commentsData, setCommentsData] = useState([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
+  const [newComment, setNewComment] = useState("");
+  const [replyTo, setReplyTo] = useState(null); // commentId to reply
 
   const fetchComments = async (postId) => {
     setCommentsLoading(true);
     try {
       const res = await fetch(`${BASE_URL}/Post/detail-post/${postId}`);
       const data = await res.json();
-      setCommentsData(data?.data?.comments || []);
+      const list = data?.data?.comments || [];
+      // API trả comments có mảng replies lồng nhau -> cần flatten để dễ build tree
+      const flatten = (items) => {
+        const out = [];
+        const walk = (c) => {
+          const { replies, ...rest } = c || {};
+          out.push(rest);
+          if (Array.isArray(replies)) replies.forEach(walk);
+        };
+        (items || []).forEach(walk);
+        return out;
+      };
+      const flattened = flatten(list);
+      setCommentsData(flattened);
     } catch (e) {
       setCommentsData([]);
     }
@@ -129,6 +189,64 @@ function CommunityPage() {
 
   const handleShowComments = (postId) => {
     setShowCommentsForPostId(postId);
+  };
+
+  // Build nested tree from flat comments
+  const threadedComments = useMemo(() => {
+    const byId = new Map();
+    (commentsData || []).forEach((c) => byId.set(c.id, { ...c, children: [] }));
+    const roots = [];
+    (commentsData || []).forEach((c) => {
+      if (c.parentId && c.parentId !== 0) {
+        const parent = byId.get(c.parentId);
+        if (parent) parent.children.push(byId.get(c.id));
+        else roots.push(byId.get(c.id));
+      } else {
+        roots.push(byId.get(c.id));
+      }
+    });
+    return roots;
+  }, [commentsData]);
+
+  const submitComment = async () => {
+    if (!showCommentsForPostId || !newComment.trim()) return;
+    const payload = {
+      postId: showCommentsForPostId,
+      parentId: replyTo || 0,
+      content: newComment.trim(),
+    };
+
+    // optimistic append
+    const tempId = `tmp_${Date.now()}`;
+    setCommentsData((prev) => [
+      ...prev,
+      {
+        id: tempId,
+        userId: userData?.id,
+        fullname: userData?.fullName || userData?.username || "Người dùng",
+        content: payload.content,
+        createdAt: new Date().toISOString(),
+        parentId: payload.parentId,
+      },
+    ]);
+    setNewComment("");
+    setReplyTo(null);
+
+    try {
+      await fetch(`${BASE_URL}/Comment/create-comment`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
+        body: JSON.stringify(payload),
+      });
+      // refresh to get real ids/order
+      fetchComments(showCommentsForPostId);
+    } catch (e) {
+      // rollback
+      setCommentsData((prev) => prev.filter((c) => c.id !== tempId));
+    }
   };
 
   React.useEffect(() => {
@@ -393,16 +511,33 @@ function CommunityPage() {
               {commentsLoading && <div className="py-8 text-center text-gray-500">Đang tải...</div>}
               {!commentsLoading && commentsData.length === 0 && <div className="py-8 text-center text-gray-500">Chưa có bình luận.</div>}
               {!commentsLoading && commentsData.length > 0 && (
-                <div className="space-y-5 max-h-96 overflow-y-auto">
-                  {commentsData.map((c) => (
-                    <div key={c.id} className="rounded-xl bg-gray-100 p-4">
-                      <p className="font-semibold text-pink-700 mb-1">{c.username}</p>
-                      <p className="text-gray-700 leading-relaxed mb-1">{c.content}</p>
-                      <p className="text-sm text-gray-500">{c.createdAt ? new Date(c.createdAt).toLocaleString() : ""}</p>
-                    </div>
+                <div className="space-y-4 max-h-96 overflow-y-auto">
+                  {threadedComments.map((c) => (
+                    <CommentNode key={c.id} c={c} onReply={(id, author)=>{ setReplyTo(id); setNewComment(`@${author} `); }} />
                   ))}
                 </div>
               )}
+
+              {/* Composer */}
+              <div className="mt-4 border-t pt-3">
+                {replyTo && (
+                  <div className="flex items-center justify-between text-xs text-gray-600 mb-2">
+                    <span>Đang phản hồi bình luận #{replyTo}</span>
+                    <button className="text-blue-600" onClick={()=>setReplyTo(null)}>Hủy</button>
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <input
+                    value={newComment}
+                    onChange={(e)=>setNewComment(e.target.value)}
+                    placeholder={replyTo ? "Viết phản hồi..." : "Viết bình luận..."}
+                    className="flex-1 h-10 px-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500/20"
+                  />
+                  <button onClick={submitComment} className="px-4 rounded-lg bg-gradient-to-r from-pink-500 to-purple-600 text-white font-semibold">
+                    Gửi
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}

@@ -254,16 +254,16 @@ const FoodHomepage = () => {
 
           {!isLoading && (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredRestaurants.map((restaurant) => (
-                  <RestaurantCard
-                    key={restaurant.id}
-                    restaurant={restaurant}
-                    onToggleFavorite={toggleFavorite}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredRestaurants.map((restaurant) => (
+              <RestaurantCard
+                key={restaurant.id}
+                restaurant={restaurant}
+                onToggleFavorite={toggleFavorite}
                     isBookmarked={bookmarkedIds.has(restaurant.id)}
-                  />
-                ))}
-              </div>
+              />
+            ))}
+          </div>
 
               {/* Pagination controls - show for all tabs with pagination */}
               {(() => {
@@ -312,14 +312,14 @@ const FoodHomepage = () => {
                     );
                   })}
                   
-                  <button
+        <button
                     onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                     disabled={currentPage === totalPages || isLoading}
                     className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
+        >
                     Sau
-                  </button>
-                </div>
+        </button>
+      </div>
               )}
             </>
           )}
