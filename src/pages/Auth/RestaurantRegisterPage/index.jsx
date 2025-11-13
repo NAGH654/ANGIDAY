@@ -8,10 +8,11 @@ import {
   Building2,
   MapPin,
   FileText,
+  Phone,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
-import { useRegisterRestaurantMutation } from "@redux/api/Auth/authApi"; 
+import { useRegisterRestaurantMutation } from "@redux/api/Auth/authApi";
 import { endPoint } from "@routes/router";
 import LoadingSpinner from "@components/LoadingSpinner";
 import { ttlStorage } from "@utils/ttlStorage";
@@ -110,6 +111,7 @@ export default function RestaurantRegisterPage() {
     username: "",
     email: "",
     password: "",
+    phoneNumber: "",
     restaurantName: "",
     address: "",
     description: "",
@@ -123,11 +125,12 @@ export default function RestaurantRegisterPage() {
       !form.username ||
       !form.email ||
       !form.password ||
+      !form.phoneNumber ||
       !form.restaurantName ||
       !form.address
     ) {
       toast.warn(
-        "Vui lòng điền đủ: Tên đăng nhập, Email, Mật khẩu, Tên nhà hàng, Địa chỉ"
+        "Vui lòng điền đủ: Tên đăng nhập, Email, Số điện thoại, Mật khẩu, Tên nhà hàng, Địa chỉ"
       );
       return false;
     }
@@ -141,13 +144,14 @@ export default function RestaurantRegisterPage() {
         username: form.username.trim(),
         email: form.email.trim(),
         password: form.password,
+        phoneNumber: form.phoneNumber.trim(),
         restaurantName: form.restaurantName.trim(),
         address: form.address.trim(),
         description: form.description.trim(),
       };
 
       const res = await registerRestaurant(payload).unwrap();
-      
+
       if (res?.isSuccess) {
         toast.success(
           "Đăng ký thành công! Vui lòng kiểm tra email để xác thực."
@@ -188,6 +192,15 @@ export default function RestaurantRegisterPage() {
         icon={Mail}
         value={form.email}
         onChange={onChange("email")}
+        disabled={isLoading}
+      />
+
+      <InputField
+        type="tel"
+        placeholder="Số điện thoại"
+        icon={Phone}
+        value={form.phoneNumber}
+        onChange={onChange("phoneNumber")}
         disabled={isLoading}
       />
 
