@@ -15,8 +15,7 @@ import {
   useBookmarkPostMutation,
   useUnbookmarkPostMutation,
   useGetMeQuery,
-  useLikePostMutation,
-  useUnlikePostMutation,
+  useTogglePostLikeMutation,
   useGetTopUsersByLikesQuery,
   useGetCommunityStatsQuery,
 } from "@redux/api/User/userApi.js";
@@ -256,71 +255,108 @@ function CommunityPage() {
   }, [apiMappedPosts]);
 
   const handleLike = async (postId) => {
-    // decide current state
-    const isCurrentlyLiked = postList.find((p) => p.id === postId)?.isLiked;
-    
-    // optimistic toggle
+    const targetPost = postList.find((p) => p.id === postId);
+    if (!targetPost) return;
+
+    const wasLiked = Boolean(targetPost.isLiked);
+    const previousLikes = Number(targetPost.interactions?.likes ?? 0);
+    const delta = wasLiked ? -1 : 1;
+
+    // optimistic update
     setPostList((prev) =>
       prev.map((p) =>
         p.id === postId
           ? {
               ...p,
-              isLiked: !p.isLiked,
+              isLiked: !wasLiked,
               interactions: {
                 ...p.interactions,
-                likes: p.isLiked
-                  ? p.interactions.likes - 1
-                  : p.interactions.likes + 1,
+                likes: Math.max(0, previousLikes + delta),
               },
             }
           : p
       )
     );
-    
+
     try {
-      if (isCurrentlyLiked) {
-        await unlikePost(postId).unwrap();
-        // Remove from localStorage
-        const currentLiked = JSON.parse(localStorage.getItem('likedPosts') || '[]');
-        const updatedLiked = currentLiked.filter(id => id !== postId);
-        localStorage.setItem('likedPosts', JSON.stringify(updatedLiked));
-        showToast("Đã bỏ thích bài viết", "info");
-      } else {
-        await likePost(postId).unwrap();
-        // Add to localStorage
-        const currentLiked = JSON.parse(localStorage.getItem('likedPosts') || '[]');
-        if (!currentLiked.includes(postId)) {
-          currentLiked.push(postId);
-          localStorage.setItem('likedPosts', JSON.stringify(currentLiked));
-        }
-        showToast("Đã thích bài viết", "success");
-      }
-    } catch (e) {
-      // rollback on error
+      const response = await togglePostLike(postId).unwrap();
+      const payload = response?.data || {};
+      const serverLiked =
+        typeof payload.isLiked === "boolean" ? payload.isLiked : !wasLiked;
+      const serverLikes =
+        typeof payload.totalLikes === "number"
+          ? payload.totalLikes
+          : Math.max(0, previousLikes + delta);
+
       setPostList((prev) =>
         prev.map((p) =>
           p.id === postId
             ? {
                 ...p,
-                isLiked: !p.isLiked,
+                isLiked: serverLiked,
                 interactions: {
                   ...p.interactions,
-                  likes: p.isLiked
-                    ? p.interactions.likes - 1
-                    : p.interactions.likes + 1,
+                  likes: serverLikes,
                 },
               }
             : p
         )
       );
+
+      const storedLikes = JSON.parse(
+        localStorage.getItem("likedPosts") || "[]"
+      );
+      const updatedLikes = new Set(storedLikes);
+      const normalizedId = Number(postId);
+      const idKey = Number.isNaN(normalizedId) ? postId : normalizedId;
+      if (serverLiked) {
+        updatedLikes.add(idKey);
+      } else {
+        updatedLikes.delete(idKey);
+      }
+      localStorage.setItem("likedPosts", JSON.stringify([...updatedLikes]));
+
+      showToast(
+        serverLiked ? "Đã thích bài viết" : "Đã bỏ thích bài viết",
+        serverLiked ? "success" : "info"
+      );
+    } catch (e) {
+      // rollback on error
+    setPostList((prev) =>
+      prev.map((p) =>
+        p.id === postId
+          ? {
+              ...p,
+                isLiked: wasLiked,
+              interactions: {
+                ...p.interactions,
+                  likes: previousLikes,
+              },
+            }
+          : p
+      )
+    );
+
+      const storedLikes = JSON.parse(
+        localStorage.getItem("likedPosts") || "[]"
+      );
+      const updatedLikes = new Set(storedLikes);
+      const normalizedId = Number(postId);
+      const idKey = Number.isNaN(normalizedId) ? postId : normalizedId;
+      if (wasLiked) {
+        updatedLikes.add(idKey);
+      } else {
+        updatedLikes.delete(idKey);
+      }
+      localStorage.setItem("likedPosts", JSON.stringify([...updatedLikes]));
+
       showToast("Thao tác thất bại", "error");
     }
   };
 
   const [bookmarkPost] = useBookmarkPostMutation();
   const [unbookmarkPost] = useUnbookmarkPostMutation();
-  const [likePost] = useLikePostMutation();
-  const [unlikePost] = useUnlikePostMutation();
+  const [togglePostLike] = useTogglePostLikeMutation();
   const [toast, setToast] = React.useState(null);
 
   const showToast = (message, type = "success") => {
@@ -346,9 +382,9 @@ function CommunityPage() {
       }
     } catch (e) {
       // rollback on error
-      setPostList((prev) =>
-        prev.map((p) => (p.id === postId ? { ...p, isSaved: !p.isSaved } : p))
-      );
+    setPostList((prev) =>
+      prev.map((p) => (p.id === postId ? { ...p, isSaved: !p.isSaved } : p))
+    );
       showToast("Thao tác thất bại", "error");
     }
   };
@@ -420,9 +456,9 @@ function CommunityPage() {
                     className="w-12 h-12 rounded-full object-cover border border-gray-100"
                   />
                 ) : (
-                  <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center text-white font-bold">
+                <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center text-white font-bold">
                     {getUserInitial()}
-                  </div>
+                </div>
                 )}
                 <button
                   onClick={() => navigate(endPoint.POST)}
@@ -539,7 +575,7 @@ function CommunityPage() {
                 </div>
               </div>
             </div>
-          </div>
+        </div>
         )}
       </main>
     </div>

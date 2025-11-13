@@ -57,9 +57,21 @@ const PostCard = ({ post, onLike, onSave, onShowComments }) => {
         </div>
 
         {/* Title + Content */}
-        <h2 className="text-xl font-bold text-gray-900 mt-3 mb-2 group-hover:text-pink-600 transition-colors">
-          {post.title}
-        </h2>
+        {(() => {
+          const rawTitle =
+            typeof post.title === "string" ? post.title.trim() : "";
+          const isMeaningfulTitle =
+            rawTitle &&
+            rawTitle.toLowerCase() !== "community_post" &&
+            rawTitle.toLowerCase() !== "community-post";
+          return (
+            isMeaningfulTitle && (
+              <h2 className="text-xl font-bold text-gray-900 mt-3 mb-2 group-hover:text-pink-600 transition-colors">
+                {post.title}
+              </h2>
+            )
+          );
+        })()}
         <p className="text-gray-700 text-base leading-relaxed whitespace-pre-wrap break-words">
           {post.content}
         </p>

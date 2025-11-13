@@ -14,9 +14,20 @@ const PostListRow = ({ post, isBookmarked, onToggleBookmark }) => {
             />
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-center gap-3 mb-2">
-                <h2 className="text-2xl font-bold text-gray-900 hover:text-pink-600 cursor-pointer transition-colors">
-                  {post.title}
-                </h2>
+                {(() => {
+                  const raw = typeof post.title === "string" ? post.title.trim() : "";
+                  const hide =
+                    !raw ||
+                    raw.toLowerCase() === "community_post" ||
+                    raw.toLowerCase() === "community-post";
+                  return (
+                    !hide && (
+                      <h2 className="text-2xl font-bold text-gray-900 hover:text-pink-600 cursor-pointer transition-colors">
+                        {post.title}
+                      </h2>
+                    )
+                  );
+                })()}
                 {post.author.verified && (
                   <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
                     <span className="text-white text-xs">✓</span>
@@ -55,7 +66,7 @@ const PostListRow = ({ post, isBookmarked, onToggleBookmark }) => {
 
         <div className="flex gap-8">
           <div className="flex-1 min-w-0">
-            <p className="text-gray-700 mb-6 line-clamp-4 text-base leading-relaxed">
+            <p className="text-gray-700 mb-6 text-base leading-relaxed whitespace-pre-wrap break-words">
               {post.content}
             </p>
 
@@ -85,7 +96,6 @@ const PostListRow = ({ post, isBookmarked, onToggleBookmark }) => {
                   <span className="text-sm font-semibold">{post.interactions.shares}</span>
                 </div>
               </div>
-
               <button className="px-8 py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-2xl font-semibold hover:shadow-lg hover:scale-105 active:scale-95 transition-all duration-200 inline-flex items-center gap-2">
                 <Eye size={18} />
                 <span>Xem bài viết</span>
@@ -94,11 +104,18 @@ const PostListRow = ({ post, isBookmarked, onToggleBookmark }) => {
           </div>
 
           <div className="flex-shrink-0">
-            <img
-              src={post.image}
-              alt={post.title}
-              className="w-40 h-40 object-cover rounded-3xl hover:scale-105 transition-transform duration-300 cursor-pointer shadow-md"
-            />
+            {post.image ? (
+              <img
+                src={post.image}
+                alt={post.title || "Ảnh bài viết"}
+                className="w-40 h-40 object-cover rounded-3xl hover:scale-105 transition-transform duration-300 cursor-pointer shadow-md"
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                }}
+              />
+            ) : (
+              <div className="w-40 h-40 bg-gray-100 rounded-3xl" />
+            )}
           </div>
         </div>
       </div>

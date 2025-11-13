@@ -482,9 +482,9 @@ function PackagePage() {
                       ) : (
                         <div className="text-xs text-gray-500 px-2 text-center">
                           QR sẽ hiển thị sau
-                        </div>
-                      )}
-                    </div>
+                          </div>
+                        )}
+                      </div>
                     <div className="flex-1">
                       <p className="text-sm text-gray-700 mb-1">
                         Nội dung CK: <span className="font-semibold">{premiumInfo?.paymentContent || "--"}</span>
@@ -498,8 +498,8 @@ function PackagePage() {
                       <p className="text-sm text-gray-700">
                         STK: <span className="font-semibold">{premiumInfo?.accountNumber || "--"}</span> - {premiumInfo?.accountName || ""}
                       </p>
-                    </div>
-                  </div>
+                        </div>
+                </div>
                 </div>
 
                 {/* Đã bỏ 3 lựa chọn ví/thẻ. Chỉ hiển thị thông tin chuyển khoản qua QR */}

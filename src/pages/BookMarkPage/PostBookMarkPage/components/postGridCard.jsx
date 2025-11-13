@@ -12,12 +12,19 @@ const PostGridCard = ({ post, isBookmarked, onToggleBookmark }) => {
       )}
 
       <div className="relative overflow-hidden rounded-t-3xl">
-        <img
-          src={post.image}
-          alt={post.title}
-          className="w-full h-56 object-cover group-hover:scale-110 transition-transform duration-700"
-          loading="lazy"
-        />
+        {post.image ? (
+          <img
+            src={post.image}
+            alt={post.title || "Ảnh bài viết"}
+            className="w-full h-56 object-cover group-hover:scale-110 transition-transform duration-700"
+            loading="lazy"
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+            }}
+          />
+        ) : (
+          <div className="w-full h-56 bg-gray-100" />
+        )}
 
         <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm text-gray-700 px-3 py-1.5 rounded-xl text-xs font-medium">
           {post.category}
@@ -59,11 +66,22 @@ const PostGridCard = ({ post, isBookmarked, onToggleBookmark }) => {
           </div>
         </div>
 
-        <h3 className="text-lg font-bold text-gray-900 mb-3 group-hover:text-pink-600 transition-colors line-clamp-2 leading-tight">
-          {post.title}
-        </h3>
+        {(() => {
+          const raw = typeof post.title === "string" ? post.title.trim() : "";
+          const hide =
+            !raw ||
+            raw.toLowerCase() === "community_post" ||
+            raw.toLowerCase() === "community-post";
+          return (
+            !hide && (
+              <h3 className="text-lg font-bold text-gray-900 mb-3 group-hover:text-pink-600 transition-colors line-clamp-2 leading-tight">
+                {post.title}
+              </h3>
+            )
+          );
+        })()}
 
-        <p className="text-gray-600 text-sm mb-5 line-clamp-3 leading-relaxed">
+        <p className="text-gray-600 text-sm mb-5 leading-relaxed whitespace-pre-wrap break-words">
           {post.content}
         </p>
 

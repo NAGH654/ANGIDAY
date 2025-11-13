@@ -17,6 +17,8 @@ import {
 } from "@redux/api/User/userApi";
 import useDebouncedValue from "@hooks/useDebouncedValue";
 import parseVnDate from "@utils/parseVnDate";
+import { BASE_URL } from "@redux/api/baseApi";
+import { resolveImageUrl } from "@utils/imageUrl";
 
 const PostBookMarkPage = () => {
   // sidebar state
@@ -55,28 +57,124 @@ const PostBookMarkPage = () => {
   const mappedApiPosts = useMemo(() => {
     if (!apiPosts) return null; // explicit null to indicate API loaded but maybe empty
     if (apiPosts.length === 0) return [];
-    return apiPosts.map((p, idx) => ({
-      id: p.id ?? p.postId ?? idx + 1000,
-      title: p.title || p.type || "Bài viết",
-      author: {
-        name: p.username || "Người dùng",
-        avatar:
-          "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=64&h=64&fit=crop&crop=face",
-        verified: false,
-      },
-      timeAgo: "",
-      content: p.content || "",
-      image: p.imageUrl || null,
-      tags: p.postTags || [],
-      interactions: {
-        likes: p.likes || 0,
-        comments: p.comments || 0,
-        shares: p.shares || 0,
-      },
-      bookmarkedDate: p.updatedAt || p.createdAt || "",
-      category: p.category || "Review",
-      isPopular: false,
-    }));
+    return apiPosts.map((p, idx) => {
+      const postData = p.post || p;
+      const userData =
+        p.user ||
+        postData.user ||
+        postData.author ||
+        p.author ||
+        postData.owner ||
+        postData.createdBy ||
+        null;
+
+      const pickFirstString = (...values) =>
+        values.find((val) => typeof val === "string" && val.trim().length > 0)?.trim() || "";
+
+      const rawTitle = pickFirstString(postData.title, postData.type, p.title, p.type);
+      const normalizedTitle = rawTitle.toLowerCase();
+      const displayTitle =
+        rawTitle && normalizedTitle !== "community_post" && normalizedTitle !== "community-post"
+          ? rawTitle
+          : "";
+
+      const imageSourceCandidate = pickFirstString(
+        postData.imageUrl,
+        postData.coverImage,
+        postData.coverImg,
+        postData.thumbnail,
+        postData.image,
+        Array.isArray(postData.images) ? postData.images[0] : "",
+        p.imageUrl,
+        p.coverImage,
+        p.thumbnail
+      );
+      const imageSource = imageSourceCandidate || "";
+      const img = resolveImageUrl(imageSource, BASE_URL);
+
+      const rawAvatarCandidate = pickFirstString(
+        p.avatarUrl,
+        p.userAvatar,
+        p.avatar,
+        p.authorAvatar,
+        p.userImage,
+        postData.avatarUrl,
+        postData.avatar,
+        postData.userAvatar,
+        postData.userImage,
+        postData.createdByAvatar,
+        userData?.avatarUrl,
+        userData?.avatar,
+        userData?.imageUrl,
+        userData?.profileImage
+      );
+      const rawAvatar = rawAvatarCandidate || "";
+      const avatar =
+        resolveImageUrl(rawAvatar, BASE_URL) ||
+        "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=64&h=64&fit=crop&crop=face";
+
+      const authorName =
+        pickFirstString(
+          p.username,
+          p.userName,
+          p.fullName,
+          p.fullname,
+          p.authorName,
+          p.displayName,
+          p.createdByName,
+          p.postedByName,
+          postData.username,
+          postData.userName,
+          postData.fullName,
+          postData.fullname,
+          postData.authorName,
+          postData.displayName,
+          postData.createdByName,
+          postData.postedByName,
+          userData?.fullName,
+          userData?.fullname,
+          userData?.username,
+          userData?.userName,
+          userData?.displayName
+        ) || "Người dùng";
+
+      return {
+        id: postData.id ?? p.postId ?? p.id ?? idx + 1000,
+        title: displayTitle || "Bài viết",
+        author: {
+          name: authorName,
+          avatar,
+          verified: false,
+        },
+        timeAgo: "",
+        content: pickFirstString(postData.content, postData.body, p.content, p.body),
+        image: img || null,
+        tags: postData.postTags || p.postTags || postData.tags || p.tags || [],
+        interactions: {
+          likes:
+            p.totalLikes ??
+            postData.totalLikes ??
+            p.likes ??
+            postData.likes ??
+            0,
+          comments:
+            p.totalComments ??
+            postData.totalComments ??
+            p.comments ??
+            postData.comments ??
+            0,
+          shares: p.shares ?? postData.shares ?? 0,
+        },
+        bookmarkedDate:
+          p.updatedAt ||
+          postData.updatedAt ||
+          p.createdAt ||
+          postData.createdAt ||
+          "",
+        category: postData.category || p.category || "Review",
+        isPopular: false,
+      };
+    });
   }, [apiPosts]);
 
   // bookmark toggle (gọi API + optimistic)

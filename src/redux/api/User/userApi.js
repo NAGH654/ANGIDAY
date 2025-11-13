@@ -136,16 +136,9 @@ export const userApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Post", "Auth"],
     }),
-    likePost: build.mutation({
+    togglePostLike: build.mutation({
       query: (postId) => ({
         url: `/Post/like/${postId}`,
-        method: "POST",
-      }),
-      invalidatesTags: ["Post", "PostLike"],
-    }),
-    unlikePost: build.mutation({
-      query: (postId) => ({
-        url: `/Post/unlike/${postId}`,
         method: "POST",
       }),
       invalidatesTags: ["Post", "PostLike"],
@@ -219,8 +212,7 @@ export const {
   useCreateCommunityPostMutation,
   useCreateReviewMutation,
   useDeletePostMutation,
-  useLikePostMutation,
-  useUnlikePostMutation,
+  useTogglePostLikeMutation,
   useGetTopUsersByLikesQuery,
   useGetCommunityStatsQuery,
   useGetPremiumInfoQuery,
