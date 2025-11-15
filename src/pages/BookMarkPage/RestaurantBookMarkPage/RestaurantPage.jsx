@@ -89,11 +89,11 @@ function RestaurantBookMarkPage() {
         await unbookmarkRestaurant(id).unwrap();
       } catch {
         // rollback
-        setFavorites((prev) => {
-          const next = new Set(prev);
+    setFavorites((prev) => {
+      const next = new Set(prev);
           next.add(id);
-          return next;
-        });
+      return next;
+    });
       }
     },
     [accessToken, unbookmarkRestaurant]
@@ -173,7 +173,7 @@ function RestaurantBookMarkPage() {
               </div>
 
               {/* Search (same row) */}
-              <div className="relative order-last lg:order-none">
+             <div className="relative order-last lg:order-none">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                 <input
                   type="text"

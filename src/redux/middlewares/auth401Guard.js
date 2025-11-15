@@ -33,7 +33,37 @@ export const auth401Guard = (store) => (next) => (action) => {
   if (isRejectedWithValue(action)) {
     const status = action.payload?.status ?? action.error?.status;
     if ([401, 403, 419, 440, 498].includes(status)) {
-      if (!loggingOut) {
+      // Check if user is restaurant owner - don't logout on 401/403 for certain endpoints
+      const state = store.getState();
+      const user = state?.auth?.user;
+      const isRestaurantOwner = user?.roleId === 1 || 
+                               user?.roleName?.toLowerCase() === "restaurant owner" ||
+                               user?.role?.toLowerCase() === "restaurant owner";
+      
+      // Get the endpoint URL from the action
+      const endpointUrl = action.meta?.arg?.endpointName || 
+                        action.meta?.arg?.originalArgs?.url || 
+                        action.payload?.data?.path ||
+                        "";
+      
+      // Endpoints that restaurant owners might not have access to but shouldn't trigger logout
+      const restaurantOwnerIgnoredEndpoints = [
+        /\/User\/community\/post/i,
+        /\/Post\/user\/review-post/i,
+        /\/Post\/user\/liked-posts/i,
+        /getMyCommunityPosts/i,
+        /getMyReviews/i,
+        /getLikedPosts/i,
+      ];
+      
+      const isRestaurantOwnerEndpoint = isRestaurantOwner && 
+        restaurantOwnerIgnoredEndpoints.some(pattern => 
+          pattern.test(endpointUrl) || pattern.test(action.type)
+        );
+      
+      // Only logout if not a restaurant owner endpoint or if it's a 403 (forbidden, not unauthorized)
+      // 401 on restaurant owner endpoints might be permission issues, not auth issues
+      if (!isRestaurantOwnerEndpoint && !loggingOut) {
         loggingOut = true;
         // 1) reset api cache + auth slice
         store.dispatch(baseApi.util.resetApiState());

@@ -51,12 +51,20 @@ function UserProfile() {
   const { data: me, isLoading, isError, refetch } = useGetMeQuery();
   const [updateProfile] = useUpdateProfileMutation();
   const [updateAvatar] = useUpdateAvatarMutation();
-  const { data: myPosts, isLoading: postsLoading, error: postsError } = useGetMyCommunityPostsQuery();
+  // Skip queries that restaurant owners might not have access to
+  const isRestaurantOwner = me?.roleId === 1 || 
+                           me?.roleName?.toLowerCase() === "restaurant owner" ||
+                           me?.role?.toLowerCase() === "restaurant owner";
+  const { data: myPosts, isLoading: postsLoading, error: postsError } = useGetMyCommunityPostsQuery(undefined, {
+    skip: isRestaurantOwner
+  });
   // Alternative endpoint for user-specific posts (disabled due to 404)
   const { data: userPosts, isLoading: userPostsLoading } = useGetUserCommunityPostsQuery(me?.id, {
     skip: true // Disabled because endpoint doesn't exist on backend
   });
-  const { data: myReviews, isLoading: reviewsLoading, error: reviewsError } = useGetMyReviewsQuery();
+  const { data: myReviews, isLoading: reviewsLoading, error: reviewsError } = useGetMyReviewsQuery(undefined, {
+    skip: isRestaurantOwner
+  });
   const [deletePost] = useDeletePostMutation();
   const dispatch = useDispatch();
   // remove presign/direct upload usage
@@ -187,10 +195,25 @@ function UserProfile() {
     return myReviews.filter(review => review.userId === me?.id).length;
   }, [myReviews, me?.id]);
 
+  // Helper để format role label với VIP status
+  const getRoleLabel = (role, isCharged) => {
+    const r = (role || "customer").trim().toLowerCase();
+    if (r === "customer" && isCharged === true) {
+      return "Khách hàng VIP";
+    }
+    if (r === "restaurant owner" || r === "owner") {
+      return "Đối tác nhà hàng";
+    }
+    if (r === "admin" || r === "administrator") {
+      return "Quản trị viên";
+    }
+    return "Khách hàng";
+  };
+
   const user = {
     name: me?.fullName || me?.fullname || me?.username || "Người dùng",
     handle: me?.email ? `@${String(me.email).split("@")[0]}` : "@user",
-    role: me?.roleName || me?.role || "customer",
+    role: getRoleLabel(me?.roleName || me?.role, me?.isCharged),
     tagline: me?.address || me?.city || "Food Lover 🍕",
     avatarBg: "from-pink-500 via-purple-500 to-indigo-500",
     cover: "https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=1200&h=360&fit=crop",
@@ -504,18 +527,6 @@ function UserProfile() {
                           {user.stats.reviews}
                         </div>
                         <div className="text-xs text-gray-600 font-medium">Đánh giá</div>
-                      </div>
-                      <div className="bg-white px-4 py-3 text-center">
-                        <div className="text-2xl font-black bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
-                          {user.stats.followers}
-                        </div>
-                        <div className="text-xs text-gray-600 font-medium">Followers</div>
-                      </div>
-                      <div className="bg-white px-4 py-3 text-center">
-                        <div className="text-2xl font-black bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-                          {user.stats.following}
-                        </div>
-                        <div className="text-xs text-gray-600 font-medium">Following</div>
                       </div>
                     </div>
 

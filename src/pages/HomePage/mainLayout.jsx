@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { Heart, Home, Users, Settings } from "lucide-react";
+import { Heart, Home, Users, Settings, Search, X } from "lucide-react";
 import CustomerSideBar from "@layout/SideBar";
 import CategoryTabs from "./CategoryTabs";
 import RestaurantCard from "./RestaurantCard";
@@ -12,7 +12,7 @@ import {
   useBookmarkRestaurantMutation,
   useUnbookmarkRestaurantMutation,
 } from "@redux/api/User/userApi";
-import { useGetRestaurantsByUserTagsQuery, useGetAllRestaurantsQuery, useGetRestaurantRecommendationsQuery } from "@redux/api/Restaurant/restaurantApi";
+import { useGetRestaurantsByUserTagsQuery, useGetAllRestaurantsQuery, useGetRestaurantRecommendationsQuery, useSearchRestaurantQuery } from "@redux/api/Restaurant/restaurantApi";
 
 // Categories for logged-in users
 const loggedInCategories = [
@@ -69,15 +69,23 @@ const FoodHomepage = () => {
   const [bookmarkRestaurant] = useBookmarkRestaurantMutation();
   const [unbookmarkRestaurant] = useUnbookmarkRestaurantMutation();
 
+  // Search query - call API when debouncedSearch has value
+  const hasSearchQuery = debouncedSearch.trim().length > 0;
+  const searchResult = useSearchRestaurantQuery(
+    { restaurantName: debouncedSearch.trim() },
+    { skip: !hasSearchQuery }
+  );
+
   // Restaurants by user tags (login) or all (guest)
-  const userTagsQuery = useGetRestaurantsByUserTagsQuery(undefined, { skip: !accessToken });
-  const recommendationsQuery = useGetRestaurantRecommendationsQuery(undefined, { skip: !accessToken });
+  const userTagsQuery = useGetRestaurantsByUserTagsQuery(undefined, { skip: !accessToken || hasSearchQuery });
+  const recommendationsQuery = useGetRestaurantRecommendationsQuery(undefined, { skip: !accessToken || hasSearchQuery });
   const allQuery = useGetAllRestaurantsQuery(undefined, { 
-    skip: (accessToken && activeCategory !== "Tất cả") || (!accessToken && activeCategory !== "Khám phá")
+    skip: hasSearchQuery || ((accessToken && activeCategory !== "Tất cả") || (!accessToken && activeCategory !== "Khám phá"))
   });
   
-  // Determine which data to use based on category and login status
+  // Determine which data to use based on search, category and login status
   const isLoading = (() => {
+    if (hasSearchQuery) return searchResult.isLoading;
     if (!accessToken) return allQuery.isLoading;
     if (activeCategory === "Theo thẻ của bạn") return userTagsQuery.isLoading;
     if (activeCategory === "Gợi ý cho bạn") return recommendationsQuery.isLoading;
@@ -87,6 +95,9 @@ const FoodHomepage = () => {
   
   // Get all restaurants data (no pagination from API)
   const allRestaurants = (() => {
+    // If searching, use search results
+    if (hasSearchQuery) return searchResult.data || [];
+    // Otherwise use category-based data
     if (!accessToken) return allQuery.data || [];
     if (activeCategory === "Theo thẻ của bạn") return userTagsQuery.data || [];
     if (activeCategory === "Gợi ý cho bạn") return recommendationsQuery.data || [];
@@ -216,11 +227,9 @@ const FoodHomepage = () => {
     [accessToken, bookmarkedIds, bookmarkRestaurant, unbookmarkRestaurant]
   );
 
-  // filter search
-  const filteredRestaurants = useMemo(() => {
-    const q = debouncedSearch.trim().toLowerCase();
-    return mappedRestaurants.filter((r) => !q || (r.name || "").toLowerCase().includes(q));
-  }, [mappedRestaurants, debouncedSearch]);
+  // When searching via API, no need to filter again
+  // filteredRestaurants is just mappedRestaurants when using API search
+  const filteredRestaurants = mappedRestaurants;
 
   return (
     <div className="">
@@ -229,8 +238,39 @@ const FoodHomepage = () => {
       <main className="flex-1 lg:ml-20">
         <CategoryTabs categories={categories} activeCategory={activeCategory} onChange={setActiveCategory} />
         <div className="max-w-7xl mx-auto px-6 py-6">
+          {/* Search Bar */}
+          <div className="mb-6">
+            <div className="relative max-w-2xl">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <Search className="h-5 w-5 text-gray-400" />
+              </div>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1); // Reset page when searching
+                }}
+                placeholder="Tìm kiếm nhà hàng..."
+                className="w-full pl-12 pr-12 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent text-gray-900 placeholder-gray-400"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => {
+                    setSearchQuery("");
+                    setCurrentPage(1);
+                  }}
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              )}
+            </div>
+          </div>
+
           <h2 className="text-3xl font-bold text-gray-900 mb-2">
-            {activeCategory === "Theo thẻ của bạn" ? "Gợi ý cho bạn" : 
+            {hasSearchQuery ? "Kết quả tìm kiếm" :
+             activeCategory === "Theo thẻ của bạn" ? "Gợi ý cho bạn" : 
              activeCategory === "Gợi ý cho bạn" ? "Gợi ý cho bạn" : 
              activeCategory === "Khám phá" ? "Khám phá địa điểm ăn uống" :
              "Khám phá địa điểm ăn uống"}
@@ -265,8 +305,9 @@ const FoodHomepage = () => {
             ))}
           </div>
 
-              {/* Pagination controls - show for all tabs with pagination */}
+              {/* Pagination controls - show for all tabs with pagination, but not when searching */}
               {(() => {
+                if (hasSearchQuery) return false; // No pagination for search results
                 const shouldShowPagination = (activeCategory === "Tất cả" || 
                                             activeCategory === "Theo thẻ của bạn" || 
                                             activeCategory === "Gợi ý cho bạn" ||

@@ -1,7 +1,14 @@
 // src/pages/Onboarding/OnboardingModal.jsx
 import React, { useMemo, useState, useEffect } from "react";
 import { X, Check } from "lucide-react";
-import { useGetTagsQuery, useChooseTagsMutation, useGetMyTagsQuery } from "@redux/api/Tag/tagApi";
+import {
+  useGetTagsQuery,
+  useChooseTagsMutation,
+  useGetMyTagsQuery,
+  useGetMyRestaurantTagsQuery,
+  useChooseRestaurantTagsMutation,
+} from "@redux/api/Tag/tagApi";
+import { useSelector } from "react-redux";
 import { markOnboardingDone } from "@utils/onboarding";
 import { toast } from "react-toastify";
 import { motion } from "framer-motion";
@@ -81,15 +88,46 @@ function Tile({ selected, label, emoji, onClick, disabled }) {
   );
 }
 
-export default function OnboardingModal({ open, onClose, userId, forceComplete = true }) {
-  const { data, isFetching, isError, refetch } = useGetTagsQuery(undefined, {
+export default function OnboardingModal({
+  open,
+  onClose,
+  userId,
+  forceComplete = true,
+}) {
+  // Check if user is restaurant owner
+  const user = useSelector((s) => s?.auth?.user);
+  const isRestaurantOwner =
+    user?.roleId === 1 ||
+    user?.roleName?.toLowerCase() === "restaurant owner" ||
+    user?.role?.toLowerCase() === "restaurant owner";
+
+  const {
+    data,
+    isFetching,
+    isError,
+    refetch,
+  } = useGetTagsQuery(undefined, {
     skip: !open,
   });
-  const [chooseTags, { isLoading: saving }] = useChooseTagsMutation();
+
+  const [chooseTags, { isLoading: savingUserTags }] =
+    useChooseTagsMutation();
+  const [chooseRestaurantTags, { isLoading: savingRestaurantTags }] =
+    useChooseRestaurantTagsMutation();
+
   // Preload user's current tags when editing from profile
   const { data: myTagsData } = useGetMyTagsQuery(undefined, {
-    skip: !open || forceComplete,
+    skip: !open || forceComplete || isRestaurantOwner,
   });
+  const { data: myRestaurantTagsData } = useGetMyRestaurantTagsQuery(
+    undefined,
+    {
+      skip: !open || forceComplete || !isRestaurantOwner,
+    }
+  );
+
+  const saving = isRestaurantOwner ? savingRestaurantTags : savingUserTags;
+  const myTagsDataToUse = isRestaurantOwner ? myRestaurantTagsData : myTagsData;
 
   // lưu key đã chọn (key = name chuẩn hoá)
   const [picked, setPicked] = useState(() => new Set());
@@ -120,7 +158,8 @@ export default function OnboardingModal({ open, onClose, userId, forceComplete =
   }, [open, forceComplete, onClose]);
 
   const tagsByCategory = useMemo(() => {
-    const arr = data?.data ?? [];
+    // Handle both user tags and restaurant tags data structure
+    const arr = Array.isArray(data) ? data : (data?.data ?? []);
     const grouped = {};
     
     arr.forEach((t) => {
@@ -129,12 +168,12 @@ export default function OnboardingModal({ open, onClose, userId, forceComplete =
         grouped[categoryName] = [];
       }
       
-      const key = toKey(t.name);
+      const key = toKey(t.tagName || t.name);
       grouped[categoryName].push({
-        id: t.id,
-        rawName: t.name, // POST cần đúng tên server
+        id: t.id || t.tagId,
+        rawName: t.tagName || t.name, // POST cần đúng tên server
         key,
-        label: toLabel(t.name),
+        label: toLabel(t.tagName || t.name),
         description: t.description,
         emoji: ICONS[key] || "🍽️",
       });
@@ -151,8 +190,8 @@ export default function OnboardingModal({ open, onClose, userId, forceComplete =
 
   // Initialize picked tags from user's current selections in edit mode
   useEffect(() => {
-    if (!forceComplete && myTagsData) {
-      const list = Array.isArray(myTagsData) ? myTagsData : myTagsData?.data || [];
+    if (!forceComplete && myTagsDataToUse) {
+      const list = Array.isArray(myTagsDataToUse) ? myTagsDataToUse : myTagsDataToUse?.data || [];
       const init = new Set(
         list
           .map((it) => toKey(it?.tagName || it?.name))
@@ -160,7 +199,7 @@ export default function OnboardingModal({ open, onClose, userId, forceComplete =
       );
       setPicked(init);
     }
-  }, [forceComplete, myTagsData]);
+  }, [forceComplete, myTagsDataToUse]);
 
   // Lấy current category
   const currentCategory = categoryOrder[currentCategoryIndex];
@@ -204,12 +243,20 @@ export default function OnboardingModal({ open, onClose, userId, forceComplete =
     if (!picked.size) return;
     const body = Array.from(picked).map((k) => {
       const it = byKey.get(k);
+      // Restaurant tag API only needs tagName, not isDeleted
+      if (isRestaurantOwner) {
+        return { tagName: it?.rawName ?? `#${k}` };
+      }
       return { tagName: it?.rawName ?? `#${k}`, isDeleted: false };
       // vẫn gửi lại đúng "tagName" server trả (# hoặc không # tuỳ server)
     });
 
     try {
-      await chooseTags(body).unwrap();
+      if (isRestaurantOwner) {
+        await chooseRestaurantTags(body).unwrap();
+      } else {
+        await chooseTags(body).unwrap();
+      }
       markOnboardingDone?.(userId);
       toast.success("Đã lưu sở thích!");
 
@@ -281,6 +328,11 @@ export default function OnboardingModal({ open, onClose, userId, forceComplete =
             <p className="text-center text-gray-500 mt-1 mb-2 text-sm">
               Chọn tối thiểu {currentCategory?.minTags} hashtag để tiếp tục
             </p>
+            {isRestaurantOwner && (
+              <p className="text-center text-sm text-pink-600 mb-2">
+                Hãy chọn những hashtag phù hợp với nhà hàng của bạn để khách dễ tìm thấy.
+              </p>
+            )}
             
             {/* Current selection count */}
             <div className="text-center text-sm text-pink-600 font-medium">

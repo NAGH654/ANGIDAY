@@ -75,6 +75,10 @@ const slice = createSlice({
           merged.emailConfirmed ??
           merged.isEmailConfirmed ??
           false,
+        // Lưu thêm các field khác từ API
+        isCharged: payload?.isCharged ?? merged.isCharged ?? false,
+        roleName: payload?.roleName ?? merged.roleName ?? merged.role ?? null,
+        role: payload?.role ?? merged.role ?? merged.roleName ?? null,
       };
 
       const norm = normalizeExpiry(payload?.expiresAtUtc);

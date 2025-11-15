@@ -197,16 +197,16 @@ const PostBookMarkPage = () => {
       refetch();
     } catch (e) {
       // rollback nếu lỗi
-      setBookmarkedIds((prev) => {
-        const next = new Set(prev);
+    setBookmarkedIds((prev) => {
+      const next = new Set(prev);
         next.add(id);
         return next;
       });
       setOptimisticRemovedIds((prev) => {
         const next = new Set(prev);
         next.delete(id);
-        return next;
-      });
+      return next;
+    });
     }
   };
 

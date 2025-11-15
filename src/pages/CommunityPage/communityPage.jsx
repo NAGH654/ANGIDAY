@@ -68,10 +68,16 @@ function CommunityPage() {
   const navigate = useNavigate();
 
   const [searchQuery, setSearchQuery] = useState("");
-  const { data: myPosts, isLoading } = useGetMyCommunityPostsQuery();
+  const { data: userData, isLoading: userLoading } = useGetMeQuery();
+  // Skip queries that restaurant owners might not have access to
+  const isRestaurantOwner = userData?.roleId === 1 || 
+                           userData?.roleName?.toLowerCase() === "restaurant owner" ||
+                           userData?.role?.toLowerCase() === "restaurant owner";
+  const { data: myPosts, isLoading } = useGetMyCommunityPostsQuery(undefined, {
+    skip: isRestaurantOwner
+  });
   const { data: bookmarkedList } = useGetBookmarkedPostsQuery();
   // const { data: likedList } = useGetLikedPostsQuery(); // Disabled until backend implements this endpoint
-  const { data: userData, isLoading: userLoading } = useGetMeQuery();
   const { data: leaderboardData } = useGetTopUsersByLikesQuery(10);
   const { data: communityStats } = useGetCommunityStatsQuery();
   const accessToken = useSelector((s) => s?.auth?.accessToken);

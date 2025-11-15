@@ -1,6 +1,5 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { Star, Heart } from "lucide-react";
 import { endPoint } from "@routes/router";
 
 const MenuSection = ({ restaurant, items }) => {
@@ -24,26 +23,25 @@ const MenuSection = ({ restaurant, items }) => {
             className="border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition-shadow"
           >
             <div className="relative">
-              <img src={item.image} alt={item.name} className="w-full h-48 object-cover" />
+              <img 
+                src={item.image} 
+                alt={item.name} 
+                className="w-full h-100 object-cover"
+                onError={(e) => {
+                  e.target.src = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300&h=200&fit=crop";
+                }}
+              />
               {item.isPopular && (
                 <span className="absolute top-3 left-3 bg-pink-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
                   Phổ biến
                 </span>
               )}
-              <button className="absolute top-3 right-3 w-8 h-8 bg-white rounded-full flex items-center justify-center hover:bg-gray-100">
-                <Heart size={16} className="text-gray-600" />
-              </button>
             </div>
             <div className="p-4">
               <h3 className="font-bold text-gray-900 mb-2">{item.name}</h3>
               <p className="text-sm text-gray-600 mb-3 line-clamp-2">{item.description}</p>
               <div className="flex items-center justify-between">
                 <span className="text-lg font-bold text-pink-600">{item.price}</span>
-                <div className="flex items-center space-x-1">
-                  <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                  <span className="text-sm font-medium">{item.rating}</span>
-                  <span className="text-sm text-gray-500">({item.reviews})</span>
-                </div>
               </div>
             </div>
           </div>

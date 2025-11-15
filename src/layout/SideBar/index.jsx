@@ -9,6 +9,13 @@ const CustomerSideBar = () => {
   const [showHeartDropdown, setShowHeartDropdown] = useState(false);
   const location = useLocation(); // 👈 lấy path hiện tại
   const accessToken = useSelector((s) => s?.auth?.accessToken);
+  const user = useSelector((s) => s?.auth?.user);
+
+  // Kiểm tra nếu user là restaurant owner
+  const isRestaurantOwner =
+    user?.roleName?.toLowerCase() === "restaurant owner" ||
+    user?.role?.toLowerCase() === "restaurant owner" ||
+    user?.roleId === 1;
 
   // Kiểm tra nếu đang ở trong route liên quan đến bookmark (restaurant hoặc post)
   const isHeartActive =
@@ -17,6 +24,14 @@ const CustomerSideBar = () => {
 
   // Kiểm tra nếu đang ở trang Post
   const isPostActive = location.pathname === endPoint.POST;
+
+  // Home link: restaurant owner → profile, user → homepage
+  const homeLink = isRestaurantOwner ? "/restaurant/profile" : endPoint.HOMEPAGE;
+  
+  // Kiểm tra nếu đang ở restaurant profile (cho restaurant owner)
+  const isHomeActive = isRestaurantOwner
+    ? location.pathname === "/restaurant/profile"
+    : location.pathname === endPoint.HOMEPAGE;
 
   return (
     <aside className="hidden lg:block w-20 bg-white shadow-lg fixed left-0 top-0 h-full z-50">
@@ -36,10 +51,10 @@ const CustomerSideBar = () => {
         <nav className="flex flex-col space-y-6">
           {/* Home */}
           <NavLink
-            to={endPoint.HOMEPAGE}
+            to={homeLink}
             className={({ isActive }) =>
               `w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
-                isActive
+                isHomeActive || isActive
                   ? "bg-gray-900 text-white"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`
@@ -48,8 +63,8 @@ const CustomerSideBar = () => {
             <Home size={20} />
           </NavLink>
 
-          {/* Community - chỉ hiển thị khi đã đăng nhập */}
-          {accessToken && (
+          {/* Community - chỉ hiển thị khi đã đăng nhập và KHÔNG phải restaurant owner */}
+          {accessToken && !isRestaurantOwner && (
             <NavLink
               to={endPoint.COMMUNITY}
               className={({ isActive }) =>
@@ -64,8 +79,8 @@ const CustomerSideBar = () => {
             </NavLink>
           )}
 
-          {/* Heart with Dropdown - chỉ hiển thị khi đã đăng nhập */}
-          {accessToken && (
+          {/* Heart with Dropdown - chỉ hiển thị khi đã đăng nhập và KHÔNG phải restaurant owner */}
+          {accessToken && !isRestaurantOwner && (
             <div className="relative">
               <NavLink
                 to={endPoint.RESTAURANT_BOOKMARK} // default route khi bấm Heart

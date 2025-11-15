@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Star, ThumbsUp, MessageCircle, Camera, X, Send, MessageSquare } from "lucide-react";
+import { Star, MessageCircle, Camera, X, Send, MessageSquare } from "lucide-react";
 import { Link } from "react-router-dom";
 import { endPoint } from "@routes/router";
 import { BASE_URL } from "@redux/api/baseApi";
@@ -21,8 +21,9 @@ const Stars = React.memo(({ count }) => (
   </div>
 ));
 
-const ReviewsSection = ({ restaurant, starDistribution, reviews }) => {
+const ReviewsSection = ({ restaurant, starDistribution, reviews, refetchReviews }) => {
   const [showReviewForm, setShowReviewForm] = useState(false);
+  const [expandedComments, setExpandedComments] = useState({}); // { reviewId: { commentId: true } }
 
   // Auto-open form if URL has #reviews-section
   React.useEffect(() => {
@@ -30,6 +31,16 @@ const ReviewsSection = ({ restaurant, starDistribution, reviews }) => {
       setShowReviewForm(true);
     }
   }, []);
+
+  const toggleCommentReplies = (reviewId, commentId) => {
+    setExpandedComments((prev) => ({
+      ...prev,
+      [reviewId]: {
+        ...(prev[reviewId] || {}),
+        [commentId]: !(prev[reviewId]?.[commentId] || false),
+      },
+    }));
+  };
   const [rating, setRating] = useState(5);
   const [content, setContent] = useState("");
   const [signatureFoodName, setSignatureFoodName] = useState("");
@@ -113,6 +124,11 @@ const ReviewsSection = ({ restaurant, starDistribution, reviews }) => {
       setRating(5);
       removeImage();
       setShowReviewForm(false);
+      
+      // Refetch reviews to show the new review immediately
+      if (refetchReviews) {
+        await refetchReviews();
+      }
     } catch (error) {
       console.error("❌ Review submission error:", error);
       toast.error("Có lỗi xảy ra khi gửi đánh giá");
@@ -143,19 +159,23 @@ const ReviewsSection = ({ restaurant, starDistribution, reviews }) => {
             {showReviewForm ? <X size={18} /> : <MessageSquare size={18} />}
             <span>{showReviewForm ? "Hủy" : "Viết đánh giá"}</span>
           </button>
-          <Link
-            to={endPoint.RESTAURANT_REVIEWS(restaurant.id)}
-            state={{ restaurant, reviews }} // tuỳ chọn: mang sẵn data qua
-            className="text-pink-600 hover:text-pink-700 font-medium"
-          >
-            Xem tất cả
-          </Link>
+        <Link
+          to={endPoint.RESTAURANT_REVIEWS(restaurant.id)}
+          state={{ restaurant, reviews }} // tuỳ chọn: mang sẵn data qua
+          className="text-pink-600 hover:text-pink-700 font-medium"
+        >
+          Xem tất cả
+        </Link>
         </div>
       </div>
 
       <div className="flex items-center space-x-2 mb-6">
         <Star className="w-5 h-5 text-yellow-400 fill-current" />
-        <span className="text-lg font-bold">{restaurant.rating}</span>
+        <span className="text-lg font-bold">
+          {typeof restaurant.rating === 'number' 
+            ? restaurant.rating.toFixed(1) 
+            : restaurant.rating}
+        </span>
         <span className="text-gray-500">
           • {restaurant.totalReviews} đánh giá
         </span>
@@ -399,11 +419,11 @@ const ReviewsSection = ({ restaurant, starDistribution, reviews }) => {
                       const imageUrl = img.startsWith('http') ? img : `${BASE_URL}/Storage/view?key=${img}`;
                       
                       return (
-                        <img
-                          key={idx}
+                      <img
+                        key={idx}
                           src={imageUrl}
-                          alt="Review"
-                          className="w-28 h-20 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                        alt="Review"
+                        className="w-28 h-20 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
                           onError={(e) => {
                             e.target.style.display = 'none';
                           }}
@@ -416,20 +436,99 @@ const ReviewsSection = ({ restaurant, starDistribution, reviews }) => {
                   </div>
                 )}
 
-                {!review.isReply && (
+                {!review.isReply && review.comments && review.comments.length > 0 && (
                   <div className="flex items-center space-x-4 text-sm">
-                    <button className="flex items-center space-x-1 text-gray-500 hover:text-pink-600">
-                      <ThumbsUp size={14} />
-                      <span>Hữu ích ({review.likes})</span>
-                    </button>
-                    <button className="flex items-center space-x-1 text-gray-500 hover:text-blue-600">
-                      <MessageCircle size={14} />
-                      <span>Trả lời (0)</span>
-                    </button>
+                    <span className="text-gray-500">
+                      {review.comments.length} {review.comments.length === 1 ? 'bình luận' : 'bình luận'}
+                    </span>
                   </div>
                 )}
               </div>
             </div>
+
+            {/* Comments Section */}
+            {review.comments && review.comments.length > 0 && (
+              <div className="mt-4 ml-12 space-y-4 border-l-2 border-gray-200 pl-4">
+                {review.comments.map((comment) => {
+                  const isExpanded = expandedComments[review.id]?.[comment.id] || false;
+                  const hasReplies = comment.replies && comment.replies.length > 0;
+                  
+                  return (
+                    <div key={comment.id} className="space-y-3">
+                      {/* Comment */}
+                      <div className="flex items-start space-x-3">
+                        <img
+                          src={comment.author.avatar}
+                          alt={comment.author.name}
+                          className="w-8 h-8 rounded-full object-cover"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            e.target.src = "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face";
+                          }}
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <span className="font-semibold text-gray-900 text-sm">
+                              {comment.author.name}
+                            </span>
+                            {comment.author.isRestaurant && (
+                              <span className="px-2 py-0.5 bg-pink-100 text-pink-600 rounded text-xs font-medium">
+                                {comment.author.restaurantName || "Chủ nhà hàng"}
+                              </span>
+                            )}
+                            <span className="text-xs text-gray-500">{comment.timeAgo}</span>
+                          </div>
+                          <p className="text-gray-700 text-sm mb-2">{comment.content}</p>
+                          
+                          {/* Show/Hide Replies Button */}
+                          {hasReplies && (
+                            <button
+                              onClick={() => toggleCommentReplies(review.id, comment.id)}
+                              className="text-xs text-blue-600 hover:text-blue-700 font-medium mb-2"
+                            >
+                              {isExpanded ? 'Ẩn' : 'Xem'} {comment.replies.length} {comment.replies.length === 1 ? 'phản hồi' : 'phản hồi'}
+                    </button>
+                          )}
+                          
+                          {/* Replies */}
+                          {hasReplies && isExpanded && (
+                            <div className="mt-2 ml-4 space-y-3 border-l-2 border-gray-200 pl-4">
+                              {comment.replies.map((reply) => (
+                                <div key={reply.id} className="flex items-start space-x-3">
+                                  <img
+                                    src={reply.author.avatar}
+                                    alt={reply.author.name}
+                                    className="w-7 h-7 rounded-full object-cover"
+                                    referrerPolicy="no-referrer"
+                                    onError={(e) => {
+                                      e.target.src = "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face";
+                                    }}
+                                  />
+                                  <div className="flex-1">
+                                    <div className="flex items-center space-x-2 mb-1">
+                                      <span className="font-semibold text-gray-900 text-sm">
+                                        {reply.author.name}
+                                      </span>
+                                      {reply.author.isRestaurant && (
+                                        <span className="px-2 py-0.5 bg-pink-100 text-pink-600 rounded text-xs font-medium">
+                                          {reply.author.restaurantName || "Chủ nhà hàng"}
+                                        </span>
+                                      )}
+                                      <span className="text-xs text-gray-500">{reply.timeAgo}</span>
+                                    </div>
+                                    <p className="text-gray-700 text-sm">{reply.content}</p>
+                                  </div>
+                                </div>
+                              ))}
+                  </div>
+                )}
+              </div>
+            </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         ))}
       </div>
