@@ -23,7 +23,8 @@ import {
   Tags
 } from "lucide-react";
 import CustomerSideBar from "@layout/SideBar";
-import { useGetMeQuery, useUpdateProfileMutation, useUpdateAvatarMutation, useGetMyCommunityPostsQuery, useGetUserCommunityPostsQuery, useGetMyReviewsQuery, useDeletePostMutation, useLazyGetUserSelectedTagsQuery } from "@redux/api/User/userApi";
+import { useGetMeQuery, useUpdateProfileMutation, useUpdateAvatarMutation, useGetMyCommunityPostsQuery, useGetUserCommunityPostsQuery, useGetMyReviewsQuery, useDeletePostMutation, useUpdatePostMutation, useLazyGetUserSelectedTagsQuery } from "@redux/api/User/userApi";
+import { useUploadMutation } from "@redux/api/Storage/storageApi";
 import { BASE_URL } from "@redux/api/baseApi";
 import { useDispatch } from "react-redux";
 import { endPoint } from "@routes/router";
@@ -55,17 +56,19 @@ function UserProfile() {
   const isRestaurantOwner = me?.roleId === 1 || 
                            me?.roleName?.toLowerCase() === "restaurant owner" ||
                            me?.role?.toLowerCase() === "restaurant owner";
-  const { data: myPosts, isLoading: postsLoading, error: postsError } = useGetMyCommunityPostsQuery(undefined, {
+  const { data: myPosts, isLoading: postsLoading, error: postsError, refetch: refetchPosts } = useGetMyCommunityPostsQuery(undefined, {
     skip: isRestaurantOwner
   });
   // Alternative endpoint for user-specific posts (disabled due to 404)
   const { data: userPosts, isLoading: userPostsLoading } = useGetUserCommunityPostsQuery(me?.id, {
     skip: true // Disabled because endpoint doesn't exist on backend
   });
-  const { data: myReviews, isLoading: reviewsLoading, error: reviewsError } = useGetMyReviewsQuery(undefined, {
+  const { data: myReviews, isLoading: reviewsLoading, error: reviewsError, refetch: refetchReviews } = useGetMyReviewsQuery(undefined, {
     skip: isRestaurantOwner
   });
   const [deletePost] = useDeletePostMutation();
+  const [updatePost] = useUpdatePostMutation();
+  const [uploadFile] = useUploadMutation();
   const dispatch = useDispatch();
   // remove presign/direct upload usage
   
@@ -94,6 +97,12 @@ function UserProfile() {
   const [showTagsModal, setShowTagsModal] = useState(false);
   const [showEditTagsModal, setShowEditTagsModal] = useState(false);
   const [triggerGetUserTags, { data: userTagsData, isFetching: isFetchingUserTags }] = useLazyGetUserSelectedTagsQuery();
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
+  const [editFormData, setEditFormData] = useState({ content: "", imageUrl: "", rating: 5 });
+  const [editImageFile, setEditImageFile] = useState(null);
+  const [editImagePreview, setEditImagePreview] = useState(null);
+  const [isUpdatingPost, setIsUpdatingPost] = useState(false);
 
   // Close dropdown when clicking outside
   React.useEffect(() => {
@@ -265,6 +274,7 @@ function UserProfile() {
       image: post.imageUrl && !post.imageUrl.startsWith('blob:') 
         ? `${BASE_URL}/Storage/view?key=${post.imageUrl}` 
         : null,
+      imageUrl: post.imageUrl || "", // Keep original key for editing
       likes: post.totalLikes || 0,
       comments: post.totalComments || 0,
       shares: 0, // API không trả về số share
@@ -302,6 +312,7 @@ function UserProfile() {
       image: review.imageUrl && !review.imageUrl.startsWith('blob:') && review.imageUrl !== 'temp_image_url'
         ? `${BASE_URL}/Storage/view?key=${review.imageUrl}` 
         : null,
+      imageUrl: review.imageUrl || "", // Keep original key for editing
       likes: review.totallikes || 0,
       comments: review.totalComments || 0,
       shares: 0,
@@ -358,6 +369,86 @@ function UserProfile() {
     setDeleteItem({ id: postId, type: postType });
     setShowDeleteModal(true);
     setOpenDropdownId(null);
+  };
+
+  const handleEditClick = (item, postType) => {
+    setEditingItem({ id: item.id, type: postType });
+    setEditFormData({
+      content: item.content || "",
+      imageUrl: item.imageUrl || "",
+      rating: item.rating || 5,
+    });
+    setEditImagePreview(item.image || null);
+    setEditImageFile(null);
+    setShowEditModal(true);
+    setOpenDropdownId(null);
+  };
+
+  const handleEditImageChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setEditImageFile(file);
+    const reader = new FileReader();
+    reader.onload = (e) => setEditImagePreview(e.target.result);
+    reader.readAsDataURL(file);
+  };
+
+  const removeEditImage = () => {
+    setEditImageFile(null);
+    setEditImagePreview(null);
+    setEditFormData({ ...editFormData, imageUrl: "" });
+  };
+
+  const handleUpdatePost = async (e) => {
+    e.preventDefault();
+    if (!editingItem) return;
+
+    setIsUpdatingPost(true);
+    try {
+      let imageUrl = editFormData.imageUrl || "";
+
+      // Upload new image if file is selected
+      if (editImageFile) {
+        try {
+          const uploadResult = await uploadFile({ file: editImageFile }).unwrap();
+          if (uploadResult?.key) {
+            imageUrl = uploadResult.key;
+          } else {
+            throw new Error("No server key returned");
+          }
+        } catch (uploadError) {
+          console.error("Image upload failed:", uploadError);
+          toast.error("Không thể tải ảnh lên. Vui lòng thử lại!");
+          setIsUpdatingPost(false);
+          return;
+        }
+      }
+
+      const body = {
+        content: editFormData.content.trim(),
+        imageUrl: imageUrl,
+        rating: editingItem.type === 'reviews' ? editFormData.rating : 0,
+      };
+
+      await updatePost({ postId: editingItem.id, body }).unwrap();
+      toast.success(`${editingItem.type === 'reviews' ? 'Bài đánh giá' : 'Bài viết'} đã được cập nhật thành công!`);
+      setShowEditModal(false);
+      setEditingItem(null);
+      setEditFormData({ content: "", imageUrl: "", rating: 5 });
+      setEditImageFile(null);
+      setEditImagePreview(null);
+      // Refetch data
+      if (editingItem.type === 'reviews') {
+        refetchReviews();
+      } else {
+        refetchPosts();
+      }
+    } catch (error) {
+      console.error('Update failed:', error);
+      toast.error('Không thể cập nhật. Vui lòng thử lại!');
+    } finally {
+      setIsUpdatingPost(false);
+    }
   };
 
   const handleConfirmDelete = () => {
@@ -636,6 +727,13 @@ function UserProfile() {
                     {/* Dropdown Menu */}
                     {openDropdownId === item.id && (
                       <div className="absolute right-0 top-12 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50 min-w-[160px]">
+                        <button
+                          onClick={() => handleEditClick(item, activeTab)}
+                          className="w-full px-4 py-2 text-left flex items-center gap-2 text-blue-600 hover:bg-blue-50 transition-colors"
+                        >
+                          <Edit size={16} />
+                          <span>Sửa {activeTab === 'reviews' ? 'bài đánh giá' : 'bài viết'}</span>
+                        </button>
                         <button
                           onClick={() => handleDeleteClick(item.id, activeTab)}
                           disabled={isDeleting}
@@ -1114,6 +1212,196 @@ function UserProfile() {
       {/* Edit Tags Modal (reuses Onboarding flow with validation) */}
       {showEditTagsModal && (
         <OnboardingModal open={showEditTagsModal} onClose={() => setShowEditTagsModal(false)} userId={me?.id} forceComplete={false} />
+      )}
+
+      {/* Edit Post/Review Modal */}
+      {showEditModal && editingItem && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative">
+            {/* Loading Overlay */}
+            {isUpdatingPost && (
+              <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-3xl flex items-center justify-center z-10">
+                <div className="flex flex-col items-center gap-3">
+                  <Loader2 size={32} className="animate-spin text-blue-600" />
+                  <span className="text-gray-600 font-medium">Đang cập nhật...</span>
+                </div>
+              </div>
+            )}
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-100">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">
+                  Sửa {editingItem.type === 'reviews' ? 'bài đánh giá' : 'bài viết'}
+                </h2>
+                <p className="text-gray-500 mt-1">Cập nhật nội dung của bạn</p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowEditModal(false);
+                  setEditingItem(null);
+                  setEditFormData({ content: "", imageUrl: "", rating: 5 });
+                  setEditImageFile(null);
+                  setEditImagePreview(null);
+                }}
+                disabled={isUpdatingPost}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdatePost} className="p-6 space-y-6">
+              {/* Rating (only for reviews) */}
+              {editingItem.type === 'reviews' && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Đánh giá *
+                  </label>
+                  <div className="flex items-center gap-2">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setEditFormData({ ...editFormData, rating: star })}
+                        disabled={isUpdatingPost}
+                        className="focus:outline-none"
+                      >
+                        <Star
+                          size={32}
+                          className={`${
+                            star <= editFormData.rating
+                              ? "text-yellow-400 fill-current"
+                              : "text-gray-300"
+                          } transition-colors`}
+                        />
+                      </button>
+                    ))}
+                    <span className="ml-2 text-gray-600 font-medium">
+                      {editFormData.rating} / 5
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Content */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Nội dung *
+                </label>
+                <textarea
+                  value={editFormData.content}
+                  onChange={(e) => setEditFormData({ ...editFormData, content: e.target.value })}
+                  disabled={isUpdatingPost}
+                  rows={6}
+                  className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 transition-all resize-none ${
+                    isUpdatingPost
+                      ? 'bg-gray-100 cursor-not-allowed border-gray-200'
+                      : 'border-gray-200 focus:ring-blue-500 focus:border-transparent'
+                  }`}
+                  placeholder="Nhập nội dung..."
+                  required
+                />
+              </div>
+
+              {/* Image Upload */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Hình ảnh
+                </label>
+                {editImagePreview ? (
+                  <div className="relative">
+                    <img
+                      src={editImagePreview}
+                      alt="Preview"
+                      className="w-full h-64 object-cover rounded-xl"
+                    />
+                    <button
+                      type="button"
+                      onClick={removeEditImage}
+                      disabled={isUpdatingPost}
+                      className="absolute top-2 right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 disabled:opacity-50"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                    {/* Allow changing image even when preview exists */}
+                    <label className={`absolute bottom-2 right-2 px-4 py-2 bg-blue-500 text-white rounded-lg cursor-pointer hover:bg-blue-600 transition-colors text-sm font-medium flex items-center gap-2 ${
+                      isUpdatingPost ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}>
+                      <Camera size={16} />
+                      <span>Đổi ảnh</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleEditImageChange}
+                        disabled={isUpdatingPost}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                ) : (
+                  <label className={`block border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
+                    isUpdatingPost
+                      ? 'border-gray-200 bg-gray-100 cursor-not-allowed'
+                      : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'
+                  }`}>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleEditImageChange}
+                      disabled={isUpdatingPost}
+                      className="hidden"
+                    />
+                    <Camera className={`w-8 h-8 mx-auto mb-2 ${
+                      isUpdatingPost ? 'text-gray-400' : 'text-gray-400'
+                    }`} />
+                    <span className={`text-sm ${
+                      isUpdatingPost ? 'text-gray-400' : 'text-gray-600'
+                    }`}>Nhấn để chọn ảnh</span>
+                  </label>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-4 pt-4 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditingItem(null);
+                    setEditFormData({ content: "", imageUrl: "", rating: 5 });
+                    setEditImageFile(null);
+                    setEditImagePreview(null);
+                  }}
+                  disabled={isUpdatingPost}
+                  className="px-6 py-3 text-gray-600 hover:text-gray-800 font-semibold rounded-xl hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUpdatingPost || !editFormData.content.trim()}
+                  className={`inline-flex items-center gap-2 px-8 py-3 rounded-xl transition-all font-semibold text-white ${
+                    isUpdatingPost || !editFormData.content.trim()
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:shadow-xl hover:scale-105'
+                  }`}
+                >
+                  {isUpdatingPost ? (
+                    <>
+                      <Loader2 size={20} className="animate-spin" />
+                      <span>Đang cập nhật...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save size={20} />
+                      <span>Lưu thay đổi</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

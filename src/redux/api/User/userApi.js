@@ -147,6 +147,14 @@ export const userApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Post", "Auth"],
     }),
+    updatePost: build.mutation({
+      query: ({ postId, body }) => ({
+        url: `/Post/${postId}`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Post", "Auth"],
+    }),
     togglePostLike: build.mutation({
       query: (postId) => ({
         url: `/Post/like/${postId}`,
@@ -224,6 +232,7 @@ export const {
   useCreateRestaurantOwnerPostMutation,
   useCreateReviewMutation,
   useDeletePostMutation,
+  useUpdatePostMutation,
   useTogglePostLikeMutation,
   useGetTopUsersByLikesQuery,
   useGetCommunityStatsQuery,
