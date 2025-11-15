@@ -121,13 +121,24 @@ export const userApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Auth"],
     }),
+    createRestaurantOwnerPost: build.mutation({
+      query: (body) => ({
+        url: "/Post/restaurant/create-owner-post",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Auth"],
+    }),
     createReview: build.mutation({
       query: (body) => ({
         url: "/Post/user/create-review",
         method: "POST",
         body,
       }),
-      invalidatesTags: ["Post"],
+      invalidatesTags: (result, error, arg) => [
+        "Post",
+        { type: "Post", id: `restaurant-feedback-${arg.restaurantId}` },
+      ],
     }),
     deletePost: build.mutation({
       query: (postId) => ({
@@ -210,6 +221,7 @@ export const {
   useUpdateProfileMutation,
   useUpdateAvatarMutation,
   useCreateCommunityPostMutation,
+  useCreateRestaurantOwnerPostMutation,
   useCreateReviewMutation,
   useDeletePostMutation,
   useTogglePostLikeMutation,

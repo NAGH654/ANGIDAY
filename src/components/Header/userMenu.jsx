@@ -11,6 +11,7 @@ import {
 import AvatarUserImage from "@components/Avatar_User_Image";
 import { motion, AnimatePresence } from "framer-motion";
 import { cleanLogout } from "@utils/cleanLogout";
+import { useGetMeQuery } from "@redux/api/User/userApi";
 // Nhận cả named lẫn default export cho endPoint để tránh vỡ import
 import * as RouterEP from "@routes/router";
 const endPoint = RouterEP.endPoint ;
@@ -18,8 +19,8 @@ const endPoint = RouterEP.endPoint ;
 // Selector auth tối giản
 const selectAuth = (s) => s.auth;
 
-// Hiển thị “vai trò” (nếu có)
-const roleInfo = (role) => {
+// Hiển thị "vai trò" (nếu có)
+const roleInfo = (role, isCharged = false) => {
   const r = (role || "").trim().toLowerCase();
   switch (r) {
     case "admin":
@@ -29,11 +30,20 @@ const roleInfo = (role) => {
     case "owner":
     case "manager":
     case "staff":
+    case "restaurant owner":
       return {
         label: "Đối tác nhà hàng",
         gradient: "from-amber-500 to-orange-600",
       };
+    case "customer":
     default:
+      // Nếu là customer và có isCharged = true thì hiển thị VIP
+      if (isCharged === true) {
+        return {
+          label: "Khách hàng VIP",
+          gradient: "from-yellow-400 via-amber-500 to-orange-500",
+        };
+      }
       return {
         label: "Khách hàng",
         gradient: "from-teal-500 to-emerald-500",
@@ -70,7 +80,11 @@ const UserMenu = ({
   className = "",
   showNameOnMobile = false,
 }) => {
-  const { user, accessToken } = useSelector(selectAuth);
+  const { user: authUser, accessToken } = useSelector(selectAuth);
+  const { data: meData } = useGetMeQuery(undefined, { skip: !accessToken });
+  // Ưu tiên dùng data từ API /User/me (mới nhất), fallback về auth state
+  const user = meData || authUser;
+  
   const location = useLocation();
   const dispatch = useDispatch();
   const [open, setOpen] = useState(false);
@@ -139,7 +153,8 @@ const UserMenu = ({
     cleanLogout(dispatch, { redirect: EP.HOMEPAGE });
   };
 
-  const { label: roleLabel, gradient } = roleInfo(user?.role);
+  const userRole = user?.roleName || user?.role || "customer";
+  const { label: roleLabel, gradient } = roleInfo(userRole, user?.isCharged);
 
   const shortenName = (name) => {
     if (!name) return "";

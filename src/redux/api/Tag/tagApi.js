@@ -20,6 +20,32 @@ export const tagApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Tag"],
     }),
+    // Restaurant Tag endpoints (reuse the same GET /Tag list)
+    getRestaurantTags: build.query({
+      query: () => ({ url: "/Tag" }),
+      providesTags: ["Tag"],
+      transformResponse: (response) => {
+        // API returns { isSuccess, statusCode, message, data: [...] }
+        const payload = response?.data ?? [];
+        return Array.isArray(payload) ? payload : [payload];
+      },
+    }),
+    getMyRestaurantTags: build.query({
+      query: () => ({ url: "/RestaurantTag/restaurant-tag" }),
+      transformResponse: (response) => {
+        const payload = response?.data ?? [];
+        return Array.isArray(payload) ? payload : [payload];
+      },
+    }),
+    chooseRestaurantTags: build.mutation({
+      // body: [{ tagName: string }]
+      query: (body) => ({
+        url: "/RestaurantTag/choose-tag",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Tag"],
+    }),
   }),
 });
 
@@ -27,4 +53,7 @@ export const {
   useGetTagsQuery,
   useGetMyTagsQuery, // dùng nếu server hỗ trợ
   useChooseTagsMutation,
+  useGetRestaurantTagsQuery,
+  useGetMyRestaurantTagsQuery,
+  useChooseRestaurantTagsMutation,
 } = tagApi;

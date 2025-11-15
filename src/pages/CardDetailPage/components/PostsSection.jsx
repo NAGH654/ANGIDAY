@@ -1,6 +1,5 @@
 import React from "react";
-import { MapPin, MoreHorizontal, Heart, MessageCircle, Share } from "lucide-react";
-import { BASE_URL } from "@redux/api/baseApi";
+import { MapPin, MoreHorizontal } from "lucide-react";
 
 const PostsSection = ({ restaurant, posts }) => {
   return (
@@ -38,27 +37,15 @@ const PostsSection = ({ restaurant, posts }) => {
             {post.imageUrl && (
               <div className="mb-4">
                 <img 
-                  src={post.imageUrl.startsWith('http') ? post.imageUrl : `${BASE_URL}/Storage/view?key=${post.imageUrl}`}
+                  src={post.imageUrl}
                   alt="Post content"
-                  className="w-full max-w-md h-48 object-cover rounded-lg"
+                  className="w-full max-w-md h-64 object-cover rounded-xl"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                  }}
                 />
               </div>
             )}
-
-            <div className="flex items-center space-x-6 text-sm text-gray-500">
-              <button className="flex items-center space-x-2 hover:text-pink-600">
-                <Heart size={16} />
-                <span>{post.likes}</span>
-              </button>
-              <button className="flex items-center space-x-2 hover:text-blue-600">
-                <MessageCircle size={16} />
-                <span>{post.comments}</span>
-              </button>
-              <button className="flex items-center space-x-2 hover:text-green-600">
-                <Share size={16} />
-                <span>{post.shares}</span>
-              </button>
-            </div>
           </div>
         ))}
       </div>

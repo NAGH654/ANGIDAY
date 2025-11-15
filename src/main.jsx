@@ -10,6 +10,7 @@ import { loadFromStorage } from "@redux/features/authSlice";
 // ⬇️ Toastify
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { Toaster } from "react-hot-toast";
 
 store.dispatch(loadFromStorage());
 
@@ -18,8 +19,10 @@ createRoot(document.getElementById("root")).render(
     <Provider store={store}>
       <>
         <App />
-        {/* Chỉ cần 1 container toàn cục */}
+        {/* Toastify (đang dùng ở vài nơi cũ) */}
         <ToastContainer autoClose={2000} />
+        {/* react-hot-toast (dành cho các trang mới) */}
+        <Toaster position="top-right" toastOptions={{ duration: 2500 }} />
       </>
     </Provider>
   </React.StrictMode>

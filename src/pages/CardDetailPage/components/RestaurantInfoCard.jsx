@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { MapPin, Phone, Clock, Globe, Star } from "lucide-react";
 
 const RestaurantInfoCard = ({ restaurant }) => {
-  const [isFollowing, setIsFollowing] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [currentImageSrc, setCurrentImageSrc] = useState(restaurant.image);
   
@@ -46,11 +45,7 @@ const RestaurantInfoCard = ({ restaurant }) => {
             </div>
             <span className="text-gray-300">|</span>
             <span>
-              <strong>{restaurant.followers}</strong> người theo dõi
-            </span>
-            <span className="text-gray-300">|</span>
-            <span>
-              <strong>{restaurant.posts}</strong> bài viết
+              <strong>{restaurant.postsCount || 0}</strong> bài viết
             </span>
           </div>
         </div>
@@ -67,33 +62,16 @@ const RestaurantInfoCard = ({ restaurant }) => {
         </div>
         <div className="flex items-start space-x-2">
           <Phone className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
-          <span className="text-gray-700">{restaurant.phone}</span>
+          <span className="text-gray-700">{restaurant.phone || "Chưa cập nhật"}</span>
         </div>
         <div className="flex items-start space-x-2">
           <Clock className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
-          <span className="text-gray-700">{restaurant.openTime}</span>
+          <span className="text-gray-700">{restaurant.openTime || "Chưa cập nhật"}</span>
         </div>
         <div className="flex items-start space-x-2">
           <Globe className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
-          <span className="text-gray-700">{restaurant.website}</span>
+          <span className="text-gray-700">{restaurant.website || "Chưa cập nhật"}</span>
         </div>
-      </div>
-
-      <div className="flex items-center space-x-3">
-        <button className="flex-1 bg-gradient-to-r from-pink-500 to-pink-600 text-white py-3 rounded-xl font-semibold hover:shadow-lg transition-all">
-          Gọi ngay
-        </button>
-        <button className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors">
-          Xem bản đồ
-        </button>
-        <button
-          onClick={() => setIsFollowing((s) => !s)}
-          className={`px-6 py-3 rounded-xl font-semibold transition-colors ${
-            isFollowing ? "bg-gray-100 text-gray-700 hover:bg-gray-200" : "bg-pink-100 text-pink-600 hover:bg-pink-200"
-          }`}
-        >
-          {isFollowing ? "Đang theo dõi" : "Theo dõi"}
-        </button>
       </div>
     </div>
   );

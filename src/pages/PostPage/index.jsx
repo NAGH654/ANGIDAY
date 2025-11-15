@@ -13,7 +13,11 @@ import {
   X,
 } from "lucide-react";
 import CustomerSideBar from "@layout/SideBar";
-import { useCreateCommunityPostMutation, useGetMeQuery } from "@redux/api/User/userApi";
+import {
+  useCreateCommunityPostMutation,
+  useCreateRestaurantOwnerPostMutation,
+  useGetMeQuery,
+} from "@redux/api/User/userApi";
 import { usePresignUploadMutation, useUploadMutation } from "@redux/api/Storage/storageApi";
 import { toast } from "react-hot-toast";
 import { BASE_URL } from "@redux/api/baseApi";
@@ -30,7 +34,8 @@ function PostPage() {
   const [error, setError] = useState("");
   const fileInputRef = useRef(null);
   
-  const [createCommunityPost, { isLoading: isSubmitting }] = useCreateCommunityPostMutation();
+  const [createCommunityPost, { isLoading: isCreatingUserPost }] = useCreateCommunityPostMutation();
+  const [createRestaurantOwnerPost, { isLoading: isCreatingOwnerPost }] = useCreateRestaurantOwnerPostMutation();
   const [presignUpload] = usePresignUploadMutation();
   const [uploadFile] = useUploadMutation();
   
@@ -44,12 +49,17 @@ function PostPage() {
     };
   }, [imagePreview]);
 
+  const isSubmitting = isCreatingUserPost || isCreatingOwnerPost;
   const charCount = postContent.length;
   const remaining = Math.max(0, MAX_CONTENT - charCount);
   const canSubmit =
     (postContent.trim().length >= 10 || (imageFile && imageFile.serverKey)) && !isUploading && !error && !isSubmitting;
 
   const previewTime = useMemo(() => "Vừa xong", []);
+  const isRestaurantOwner = useMemo(() => {
+    const role = userData?.roleName || userData?.role;
+    return role?.toLowerCase() === "restaurant owner";
+  }, [userData]);
 
   // Helper functions để lấy thông tin user
   const getUserName = () => {
@@ -162,9 +172,14 @@ function PostPage() {
         payload.imageUrl = null;
       }
       
-      await createCommunityPost(payload).unwrap();
-      
-      toast.success("Đăng bài thành công!");
+      const submitMutation = isRestaurantOwner ? createRestaurantOwnerPost : createCommunityPost;
+      await submitMutation(payload).unwrap();
+
+      toast.success(
+        isRestaurantOwner
+          ? "Bạn đã đăng bài nhà hàng thành công!"
+          : "Bạn đã đăng bài thành công!"
+      );
       
       // Reset form
     setPostContent("");
@@ -227,6 +242,7 @@ function PostPage() {
               {error}
             </div>
           )}
+
 
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
             {/* Form (2 cột) */}
