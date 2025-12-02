@@ -31,10 +31,11 @@ export default function VerifyEmailPage() {
     if (currentState !== "success") return;
     
     // Lưu flag vào localStorage để báo hiệu email đã được verify (cho các tab khác)
-    const email = ttlStorage.get("lastRegisterEmail") || "";
+    // Ưu tiên lấy từ localStorage thường, sau đó mới lấy từ ttlStorage
+    const email = localStorage.getItem("pendingVerificationEmail") || ttlStorage.get("lastRegisterEmail") || "";
     if (email) {
       localStorage.setItem("emailVerified", JSON.stringify({
-        email: email,
+        email: email.trim(),
         timestamp: Date.now()
       }));
       // Trigger storage event để các tab khác có thể detect

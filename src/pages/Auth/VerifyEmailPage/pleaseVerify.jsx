@@ -21,25 +21,48 @@ export default function PleaseVerifyPage() {
     }
   }, [emailFromQuery]);
 
+  // Lưu email vào localStorage thường (không có TTL) để dùng khi verify
+  useEffect(() => {
+    const currentEmail = email || emailFromQuery || "";
+    if (currentEmail) {
+      localStorage.setItem("pendingVerificationEmail", currentEmail);
+    }
+  }, [email, emailFromQuery]);
+
   // Kiểm tra xem email đã được verify chưa (từ tab khác)
   useEffect(() => {
+    // Lấy email hiện tại (ưu tiên query, sau đó localStorage, cuối cùng ttlStorage)
+    const getCurrentEmail = () => {
+      return email || emailFromQuery || localStorage.getItem("pendingVerificationEmail") || ttlStorage.get("lastRegisterEmail") || "";
+    };
+
     const checkVerificationStatus = () => {
       try {
         const verifiedData = localStorage.getItem("emailVerified");
         if (verifiedData) {
           const parsed = JSON.parse(verifiedData);
-          const currentEmail = email || emailFromQuery || ttlStorage.get("lastRegisterEmail") || "";
+          const currentEmail = getCurrentEmail();
+          
+          // Normalize email để so sánh (lowercase, trim)
+          const normalizeEmail = (e) => (e || "").toLowerCase().trim();
+          const verifiedEmail = normalizeEmail(parsed.email);
+          const currentEmailNormalized = normalizeEmail(currentEmail);
           
           // Kiểm tra xem email đã được verify có khớp với email hiện tại không
-          if (parsed.email && currentEmail && parsed.email.toLowerCase() === currentEmail.toLowerCase()) {
+          // Hoặc nếu không có email hiện tại, vẫn redirect nếu có flag verify
+          if (verifiedEmail && (currentEmailNormalized === verifiedEmail || !currentEmailNormalized)) {
             // Xóa flag sau khi đã sử dụng
             localStorage.removeItem("emailVerified");
+            localStorage.removeItem("pendingVerificationEmail");
             // Redirect về trang login
             navigate(endPoint.LOGIN, { replace: true });
+            return true;
           }
         }
+        return false;
       } catch (error) {
         console.error("Error checking verification status:", error);
+        return false;
       }
     };
 
@@ -55,7 +78,12 @@ export default function PleaseVerifyPage() {
     window.addEventListener("storage", handleStorageChange);
 
     // Polling để kiểm tra định kỳ (fallback nếu storage event không hoạt động)
-    const pollingInterval = setInterval(checkVerificationStatus, 2000); // Kiểm tra mỗi 2 giây
+    // Giảm interval xuống 1 giây để phản hồi nhanh hơn
+    const pollingInterval = setInterval(() => {
+      if (checkVerificationStatus()) {
+        clearInterval(pollingInterval);
+      }
+    }, 1000); // Kiểm tra mỗi 1 giây
 
     return () => {
       window.removeEventListener("storage", handleStorageChange);
