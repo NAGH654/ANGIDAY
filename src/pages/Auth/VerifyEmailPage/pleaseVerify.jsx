@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { Mail, CheckCircle, AlertCircle } from "lucide-react";
 import { ttlStorage } from "@utils/ttlStorage";
+import { endPoint } from "@routes/router";
 
 export default function PleaseVerifyPage() {
   const [mounted, setMounted] = useState(false);
   const [params] = useSearchParams();
+  const navigate = useNavigate();
   const emailFromQuery = params.get("email") || "";
   const [email, setEmail] = useState(emailFromQuery);
 
@@ -18,6 +20,48 @@ export default function PleaseVerifyPage() {
       setEmail(saved);
     }
   }, [emailFromQuery]);
+
+  // Kiểm tra xem email đã được verify chưa (từ tab khác)
+  useEffect(() => {
+    const checkVerificationStatus = () => {
+      try {
+        const verifiedData = localStorage.getItem("emailVerified");
+        if (verifiedData) {
+          const parsed = JSON.parse(verifiedData);
+          const currentEmail = email || emailFromQuery || ttlStorage.get("lastRegisterEmail") || "";
+          
+          // Kiểm tra xem email đã được verify có khớp với email hiện tại không
+          if (parsed.email && currentEmail && parsed.email.toLowerCase() === currentEmail.toLowerCase()) {
+            // Xóa flag sau khi đã sử dụng
+            localStorage.removeItem("emailVerified");
+            // Redirect về trang login
+            navigate(endPoint.LOGIN, { replace: true });
+          }
+        }
+      } catch (error) {
+        console.error("Error checking verification status:", error);
+      }
+    };
+
+    // Kiểm tra ngay khi component mount
+    checkVerificationStatus();
+
+    // Lắng nghe storage event từ các tab khác
+    const handleStorageChange = (e) => {
+      if (e.key === "emailVerified") {
+        checkVerificationStatus();
+      }
+    };
+    window.addEventListener("storage", handleStorageChange);
+
+    // Polling để kiểm tra định kỳ (fallback nếu storage event không hoạt động)
+    const pollingInterval = setInterval(checkVerificationStatus, 2000); // Kiểm tra mỗi 2 giây
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      clearInterval(pollingInterval);
+    };
+  }, [email, emailFromQuery, navigate]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50 flex items-center justify-center p-6">

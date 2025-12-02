@@ -3,7 +3,8 @@ import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import { CheckCircle, XCircle, AlertTriangle, ArrowRight } from "lucide-react";
 import HourglassSpinner from "@components/HourglassSpinner";
 import { useVerifyEmailQuery } from "@redux/api/Auth/authApi";
-import { endPoint } from "@routes/router"; 
+import { endPoint } from "@routes/router";
+import { ttlStorage } from "@utils/ttlStorage"; 
 
 export default function VerifyEmailPage() {
   const [mounted, setMounted] = useState(false);
@@ -28,6 +29,19 @@ export default function VerifyEmailPage() {
 
   useEffect(() => {
     if (currentState !== "success") return;
+    
+    // Lưu flag vào localStorage để báo hiệu email đã được verify (cho các tab khác)
+    const email = ttlStorage.get("lastRegisterEmail") || "";
+    if (email) {
+      localStorage.setItem("emailVerified", JSON.stringify({
+        email: email,
+        timestamp: Date.now()
+      }));
+      // Trigger storage event để các tab khác có thể detect
+      // Note: storage event chỉ trigger trong các tab khác, không trigger trong tab hiện tại
+      // Vì vậy chúng ta cần polling trong pleaseVerify page
+    }
+    
     setCountdown(3);
     const itv = setInterval(
       () => setCountdown((v) => (v <= 1 ? 0 : v - 1)),
