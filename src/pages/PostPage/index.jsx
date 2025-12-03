@@ -52,8 +52,18 @@ function PostPage() {
   const isSubmitting = isCreatingUserPost || isCreatingOwnerPost;
   const charCount = postContent.length;
   const remaining = Math.max(0, MAX_CONTENT - charCount);
+  const isCharged = !!userData?.isCharged;
+  const containsLink = useMemo(() => {
+    const linkRegex = /https?:\/\/|www\./i;
+    return linkRegex.test(postContent);
+  }, [postContent]);
+  const linkRestricted = !isCharged && containsLink;
   const canSubmit =
-    (postContent.trim().length >= 10 || (imageFile && imageFile.serverKey)) && !isUploading && !error && !isSubmitting;
+    (postContent.trim().length >= 10 || (imageFile && imageFile.serverKey)) &&
+    !isUploading &&
+    !error &&
+    !isSubmitting &&
+    !linkRestricted;
 
   const previewTime = useMemo(() => "Vừa xong", []);
   const isRestaurantOwner = useMemo(() => {
@@ -159,6 +169,10 @@ function PostPage() {
 
   const onSubmit = async () => {
     if (!canSubmit) return;
+    if (linkRestricted) {
+      toast.error("Bạn cần đăng ký gói dịch vụ để đăng bài có chứa liên kết.");
+      return;
+    }
     
     try {
       
@@ -306,6 +320,11 @@ function PostPage() {
                     {charCount}/{MAX_CONTENT}
                   </div>
                 </div>
+                {linkRestricted && (
+                  <p className="mt-2 text-sm text-red-600 font-medium">
+                    Tài khoản hiện chưa đăng ký gói nên không thể đăng bài chứa liên kết.
+                  </p>
+                )}
               </div>
 
               {/* Ảnh */}

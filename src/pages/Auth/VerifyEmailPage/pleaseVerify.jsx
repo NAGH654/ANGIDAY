@@ -36,28 +36,47 @@ export default function PleaseVerifyPage() {
       return email || emailFromQuery || localStorage.getItem("pendingVerificationEmail") || ttlStorage.get("lastRegisterEmail") || "";
     };
 
+    const handleVerification = (verifiedEmail) => {
+      const currentEmail = getCurrentEmail();
+      
+      // Normalize email để so sánh (lowercase, trim)
+      const normalizeEmail = (e) => (e || "").toLowerCase().trim();
+      const verifiedEmailNormalized = normalizeEmail(verifiedEmail);
+      const currentEmailNormalized = normalizeEmail(currentEmail);
+      
+      // Kiểm tra xem email đã được verify có khớp với email hiện tại không
+      // Hoặc nếu không có email hiện tại, vẫn redirect nếu có flag verify
+      if (verifiedEmailNormalized && (currentEmailNormalized === verifiedEmailNormalized || !currentEmailNormalized)) {
+        // Xóa flag sau khi đã sử dụng
+        localStorage.removeItem("emailVerified");
+        localStorage.removeItem("pendingVerificationEmail");
+        // Redirect về trang login
+        navigate(endPoint.LOGIN, { replace: true });
+        return true;
+      }
+      return false;
+    };
+
+    // Sử dụng BroadcastChannel để lắng nghe message từ các tab khác (real-time)
+    let channel = null;
+    try {
+      channel = new BroadcastChannel("email-verification");
+      channel.onmessage = (event) => {
+        if (event.data?.type === "emailVerified") {
+          handleVerification(event.data.email);
+        }
+      };
+    } catch (error) {
+      console.error("BroadcastChannel not supported, falling back to localStorage:", error);
+    }
+
+    // Fallback: Kiểm tra localStorage (cho trường hợp BroadcastChannel không được hỗ trợ)
     const checkVerificationStatus = () => {
       try {
         const verifiedData = localStorage.getItem("emailVerified");
         if (verifiedData) {
           const parsed = JSON.parse(verifiedData);
-          const currentEmail = getCurrentEmail();
-          
-          // Normalize email để so sánh (lowercase, trim)
-          const normalizeEmail = (e) => (e || "").toLowerCase().trim();
-          const verifiedEmail = normalizeEmail(parsed.email);
-          const currentEmailNormalized = normalizeEmail(currentEmail);
-          
-          // Kiểm tra xem email đã được verify có khớp với email hiện tại không
-          // Hoặc nếu không có email hiện tại, vẫn redirect nếu có flag verify
-          if (verifiedEmail && (currentEmailNormalized === verifiedEmail || !currentEmailNormalized)) {
-            // Xóa flag sau khi đã sử dụng
-            localStorage.removeItem("emailVerified");
-            localStorage.removeItem("pendingVerificationEmail");
-            // Redirect về trang login
-            navigate(endPoint.LOGIN, { replace: true });
-            return true;
-          }
+          return handleVerification(parsed.email);
         }
         return false;
       } catch (error) {
@@ -66,10 +85,10 @@ export default function PleaseVerifyPage() {
       }
     };
 
-    // Kiểm tra ngay khi component mount
+    // Kiểm tra ngay khi component mount (fallback)
     checkVerificationStatus();
 
-    // Lắng nghe storage event từ các tab khác
+    // Lắng nghe storage event từ các tab khác (fallback)
     const handleStorageChange = (e) => {
       if (e.key === "emailVerified") {
         checkVerificationStatus();
@@ -77,8 +96,7 @@ export default function PleaseVerifyPage() {
     };
     window.addEventListener("storage", handleStorageChange);
 
-    // Polling để kiểm tra định kỳ (fallback nếu storage event không hoạt động)
-    // Giảm interval xuống 1 giây để phản hồi nhanh hơn
+    // Polling để kiểm tra định kỳ (fallback nếu BroadcastChannel và storage event không hoạt động)
     const pollingInterval = setInterval(() => {
       if (checkVerificationStatus()) {
         clearInterval(pollingInterval);
@@ -86,6 +104,9 @@ export default function PleaseVerifyPage() {
     }, 1000); // Kiểm tra mỗi 1 giây
 
     return () => {
+      if (channel) {
+        channel.close();
+      }
       window.removeEventListener("storage", handleStorageChange);
       clearInterval(pollingInterval);
     };

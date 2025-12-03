@@ -30,17 +30,31 @@ export default function VerifyEmailPage() {
   useEffect(() => {
     if (currentState !== "success") return;
     
-    // Lưu flag vào localStorage để báo hiệu email đã được verify (cho các tab khác)
-    // Ưu tiên lấy từ localStorage thường, sau đó mới lấy từ ttlStorage
-    const email = localStorage.getItem("pendingVerificationEmail") || ttlStorage.get("lastRegisterEmail") || "";
-    if (email) {
-      localStorage.setItem("emailVerified", JSON.stringify({
+    // Sử dụng BroadcastChannel để gửi thông báo verify thành công đến các tab khác
+    // BroadcastChannel là Web API có sẵn, không cần backend
+    try {
+      const channel = new BroadcastChannel("email-verification");
+      const email = localStorage.getItem("pendingVerificationEmail") || ttlStorage.get("lastRegisterEmail") || "";
+      
+      // Gửi message đến tất cả các tab đang lắng nghe
+      channel.postMessage({
+        type: "emailVerified",
         email: email.trim(),
         timestamp: Date.now()
-      }));
-      // Trigger storage event để các tab khác có thể detect
-      // Note: storage event chỉ trigger trong các tab khác, không trigger trong tab hiện tại
-      // Vì vậy chúng ta cần polling trong pleaseVerify page
+      });
+      
+      // Đóng channel sau khi gửi
+      setTimeout(() => channel.close(), 1000);
+    } catch (error) {
+      console.error("BroadcastChannel not supported, falling back to localStorage:", error);
+      // Fallback: sử dụng localStorage nếu BroadcastChannel không được hỗ trợ
+      const email = localStorage.getItem("pendingVerificationEmail") || ttlStorage.get("lastRegisterEmail") || "";
+      if (email) {
+        localStorage.setItem("emailVerified", JSON.stringify({
+          email: email.trim(),
+          timestamp: Date.now()
+        }));
+      }
     }
     
     setCountdown(3);
