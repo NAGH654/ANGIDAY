@@ -1,15 +1,31 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Mail, CheckCircle, AlertCircle } from "lucide-react";
 import { ttlStorage } from "@utils/ttlStorage";
 import { endPoint } from "@routes/router";
+import { useLazyGetMeQuery } from "@redux/api/User/userApi";
 
 export default function PleaseVerifyPage() {
   const [mounted, setMounted] = useState(false);
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const [triggerGetMe] = useLazyGetMeQuery();
   const emailFromQuery = params.get("email") || "";
   const [email, setEmail] = useState(emailFromQuery);
+  const hasRedirectedRef = useRef(false);
+
+  const cleanupVerificationFlags = useCallback(() => {
+    localStorage.removeItem("emailVerified");
+    localStorage.removeItem("emailVerifiedTimestamp");
+    localStorage.removeItem("pendingVerificationEmail");
+  }, []);
+
+  const redirectToLogin = useCallback(() => {
+    if (hasRedirectedRef.current) return;
+    hasRedirectedRef.current = true;
+    cleanupVerificationFlags();
+    navigate(endPoint.LOGIN, { replace: true });
+  }, [cleanupVerificationFlags, navigate]);
 
   useEffect(() => setMounted(true), []);
 
@@ -47,11 +63,7 @@ export default function PleaseVerifyPage() {
       // Kiểm tra xem email đã được verify có khớp với email hiện tại không
       // Hoặc nếu không có email hiện tại, vẫn redirect nếu có flag verify
       if (verifiedEmailNormalized && (currentEmailNormalized === verifiedEmailNormalized || !currentEmailNormalized)) {
-        // Xóa flag sau khi đã sử dụng
-        localStorage.removeItem("emailVerified");
-        localStorage.removeItem("pendingVerificationEmail");
-        // Redirect về trang login
-        navigate(endPoint.LOGIN, { replace: true });
+        redirectToLogin();
         return true;
       }
       return false;
@@ -110,7 +122,42 @@ export default function PleaseVerifyPage() {
       window.removeEventListener("storage", handleStorageChange);
       clearInterval(pollingInterval);
     };
-  }, [email, emailFromQuery, navigate]);
+  }, [email, emailFromQuery, redirectToLogin]);
+
+  // Poll /User/me to detect verification changes even when confirmed on another device
+  useEffect(() => {
+    let isActive = true;
+    let timeoutId;
+
+    const pollVerificationStatus = async () => {
+      if (!isActive || hasRedirectedRef.current) return;
+      try {
+        const result = await triggerGetMe().unwrap();
+        const isVerified =
+          result?.isEmailVerified ??
+          result?.emailVerified ??
+          result?.emailVerifiedFlag ??
+          result?.isVerifiedEmail ??
+          false;
+        if (isVerified) {
+          redirectToLogin();
+          return;
+        }
+      } catch (error) {
+        // Silently ignore polling errors
+      }
+      if (isActive && !hasRedirectedRef.current) {
+        timeoutId = setTimeout(pollVerificationStatus, 4000);
+      }
+    };
+
+    pollVerificationStatus();
+
+    return () => {
+      isActive = false;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [triggerGetMe, redirectToLogin]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50 flex items-center justify-center p-6">
